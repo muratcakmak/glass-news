@@ -8,7 +8,7 @@
 // =========================================
 
 const API_URL = "https://news-data.omc345.workers.dev";
-const APP_VERSION = "2.2.8";
+const APP_VERSION = "2.2.9";
 const VAPID_PUBLIC_KEY =
 	"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM";
 ("BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLcLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM");
@@ -198,7 +198,7 @@ const elements = {
 	modalReadTime: document.getElementById("modalReadTime"),
 	modalImage: document.getElementById("modalImage"),
 	modalTags: document.getElementById("modalTags"),
-	modalContent: document.getElementById("modalMainContent"),
+	modalContent: document.getElementById("modalContent"),
 	modalSourceLink: document.getElementById("modalSourceLink"),
 	modalShare: document.getElementById("modalShare"),
 	// Search elements

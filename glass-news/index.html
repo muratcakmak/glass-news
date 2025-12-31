@@ -41,7 +41,7 @@
   <!-- Navigation -->
   <nav class="navbar">
     <div class="navbar-inner">
-      <a href="/" class="navbar-brand">Glass News <span class="navbar-version app-version" style="font-size: 0.6em; opacity: 0.5; font-weight: 400; margin-left: 4px;">v2.2.8</span></a>
+      <a href="/" class="navbar-brand">Glass News <span class="navbar-version app-version" style="font-size: 0.6em; opacity: 0.5; font-weight: 400; margin-left: 4px;">v2.2.9</span></a>
       <div class="navbar-actions">
         <button class="btn btn-primary btn-sm" id="navInstallBtn" style="display: none; padding: 4px 12px; font-size: 0.8em; border-radius: 20px;">Install App</button>
         <button class="btn btn-icon" id="notificationBtn" aria-label="Notifications">
@@ -104,27 +104,15 @@
   </main>
 
   <!-- Article Modal -->
-  <div class="article-modal" id="articleModal">
-    <div class="article-modal-overlay" id="modalOverlay"></div>
+  <div class="article-modal" id="articleModal" style="display: none;">
+    <div class="article-modal-overlay"></div>
     <div class="article-modal-content">
-      <div class="article-modal-header">
-        <button class="modal-close" id="modalClose" aria-label="Close">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-        <div class="modal-actions">
-          <button class="modal-action-btn" id="modalShare" aria-label="Share">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-              <polyline points="16 6 12 2 8 6"></polyline>
-              <line x1="12" y1="2" x2="12" y2="15"></line>
-            </svg>
-          </button>
-        </div>
-      </div>
-      
+      <button class="article-modal-close" id="modalClose" aria-label="Close">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
       <div class="article-modal-body">
         <div class="article-modal-image-container" id="modalImageContainer">
           <img id="modalImage" alt="" loading="lazy" class="article-modal-image">
@@ -143,7 +131,7 @@
 
           <div class="article-modal-tags" id="modalTags"></div>
 
-          <div class="article-modal-text" id="modalMainContent"></div>
+          <div class="article-modal-text" id="modalContent"></div>
 
           <div class="article-modal-footer">
             <button class="btn btn-share" id="modalShare">
