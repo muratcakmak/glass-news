@@ -1,20 +1,22 @@
 # Testing Guide - Quick Start
 
+**✅ SWAGGER UI IS NOW WORKING!**
+All 12 endpoints are documented and testable at: https://news-data.omc345.workers.dev/docs
+
 ## 🚀 Easiest Way: Swagger UI (No Code Required!)
 
 **Just open this URL in your browser:**
-https://news-data.omc345.workers.dev/docs
+👉 **https://news-data.omc345.workers.dev/docs**
 
 You'll get an interactive Swagger UI where you can:
-- ✅ See all API endpoints
+- ✅ See all 12 API endpoints documented
 - ✅ Click "Try it out" to test any endpoint
 - ✅ View request/response examples
+- ✅ Fill in parameters and execute requests
 - ✅ No cURL, no Python, no setup needed!
 
-### Alternative Documentation UIs
+### Alternative Documentation
 
-- **Swagger UI:** https://news-data.omc345.workers.dev/docs
-- **ReDoc:** https://news-data.omc345.workers.dev/redoc
 - **OpenAPI JSON:** https://news-data.omc345.workers.dev/openapi.json
 
 ---
