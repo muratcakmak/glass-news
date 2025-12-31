@@ -4,71 +4,91 @@
  */
 
 // =========================================
-// Sample News Data (Replace with your API)
+// API Configuration
 // =========================================
 
-const NEWS_DATA = [
-  {
-    id: '1',
-    category: 'Research',
-    title: 'DeepMind Achieves Breakthrough in Protein Structure Prediction',
-    excerpt: 'New AlphaFold 3 model can predict protein-ligand interactions with unprecedented accuracy, opening doors for drug discovery.',
-    image: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=600&q=80',
-    author: 'Sarah Chen',
-    date: '2 hours ago',
-    readTime: '5 min'
-  },
-  {
-    id: '2',
-    category: 'Industry',
-    title: 'Apple Integrates Advanced AI Features Across All Devices',
-    excerpt: 'iOS 19 introduces on-device AI processing for enhanced privacy and performance in everyday tasks.',
-    image: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=600&q=80',
-    author: 'Michael Park',
-    date: '4 hours ago',
-    readTime: '4 min'
-  },
-  {
-    id: '3',
-    category: 'Startups',
-    title: 'AI Coding Assistant Startup Raises $500M at $5B Valuation',
-    excerpt: 'The rapid growth of AI-powered development tools continues as enterprise adoption accelerates.',
-    image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&q=80',
-    author: 'Emma Wilson',
-    date: '6 hours ago',
-    readTime: '3 min'
-  },
-  {
-    id: '4',
-    category: 'Ethics',
-    title: 'EU Passes Comprehensive AI Regulation Framework',
-    excerpt: 'New legislation establishes strict guidelines for high-risk AI applications and mandates transparency requirements.',
-    image: 'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=600&q=80',
-    author: 'David Mueller',
-    date: '8 hours ago',
-    readTime: '6 min'
-  },
-  {
-    id: '5',
-    category: 'Tools',
-    title: 'Open Source LLM Surpasses GPT-4 on Key Benchmarks',
-    excerpt: 'Community-driven development produces state-of-the-art results, democratizing access to advanced AI capabilities.',
-    image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&q=80',
-    author: 'Alex Rivera',
-    date: '10 hours ago',
-    readTime: '4 min'
-  },
-  {
-    id: '6',
-    category: 'Research',
-    title: 'Researchers Develop AI That Can Explain Its Reasoning',
-    excerpt: 'New interpretability breakthrough allows users to understand how AI models arrive at their conclusions.',
-    image: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=600&q=80',
-    author: 'Lisa Zhang',
-    date: '12 hours ago',
-    readTime: '5 min'
+const API_URL = 'https://news-data.omc345.workers.dev';
+let NEWS_DATA = [];
+
+/**
+ * Fetch articles from API
+ */
+async function fetchArticles(source = null, limit = 50) {
+  try {
+    const url = source
+      ? `${API_URL}/api/articles?source=${source}&limit=${limit}`
+      : `${API_URL}/api/articles?limit=${limit}`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.articles || [];
+  } catch (error) {
+    console.error('Error fetching articles:', error);
+    showToast('Failed to load articles', 'error');
+    return [];
   }
-];
+}
+
+/**
+ * Transform API article to UI format
+ */
+function transformArticle(apiArticle) {
+  const getTimeAgo = (crawledAt) => {
+    const now = new Date();
+    const crawled = new Date(crawledAt);
+    const diffMs = now - crawled;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays > 0) return `${diffDays}d ago`;
+    if (diffHours > 0) return `${diffHours}h ago`;
+    if (diffMins > 0) return `${diffMins}m ago`;
+    return 'Just now';
+  };
+
+  const getReadTime = (content) => {
+    if (!content) return '3 min';
+    const words = content.split(' ').length;
+    const mins = Math.ceil(words / 200);
+    return `${mins} min`;
+  };
+
+  const getCategoryName = (source) => {
+    const map = {
+      'hackernews': 'Tech',
+      'wikipedia': 'News',
+      'reddit': 'Community',
+      't24': 'Turkey',
+      'eksisozluk': 'Turkey'
+    };
+    return map[source] || source;
+  };
+
+  return {
+    id: apiArticle.id,
+    category: getCategoryName(apiArticle.source),
+    title: apiArticle.transformedTitle || apiArticle.originalTitle,
+    excerpt: apiArticle.transformedContent
+      ? apiArticle.transformedContent.substring(0, 200) + '...'
+      : apiArticle.originalContent.substring(0, 200) + '...',
+    fullContent: apiArticle.transformedContent || apiArticle.originalContent,
+    image: apiArticle.thumbnailUrl?.startsWith('http')
+      ? apiArticle.thumbnailUrl
+      : `${API_URL}${apiArticle.thumbnailUrl}`,
+    author: 'AI Curated',
+    date: getTimeAgo(apiArticle.crawledAt),
+    readTime: getReadTime(apiArticle.transformedContent || apiArticle.originalContent),
+    tags: apiArticle.tags || [],
+    originalUrl: apiArticle.originalUrl,
+    source: apiArticle.source
+  };
+}
 
 // =========================================
 // DOM Elements
@@ -84,7 +104,19 @@ const elements = {
   installAccept: document.getElementById('installAccept'),
   installDismiss: document.getElementById('installDismiss'),
   toast: document.getElementById('toast'),
-  categoryPills: document.querySelectorAll('.category-pill')
+  categoryPills: document.querySelectorAll('.category-pill'),
+  // Modal elements
+  articleModal: document.getElementById('articleModal'),
+  modalClose: document.getElementById('modalClose'),
+  modalCategory: document.getElementById('modalCategory'),
+  modalTitle: document.getElementById('modalTitle'),
+  modalAuthor: document.getElementById('modalAuthor'),
+  modalDate: document.getElementById('modalDate'),
+  modalReadTime: document.getElementById('modalReadTime'),
+  modalImage: document.getElementById('modalImage'),
+  modalTags: document.getElementById('modalTags'),
+  modalContent: document.getElementById('modalContent'),
+  modalSourceLink: document.getElementById('modalSourceLink')
 };
 
 // =========================================
@@ -168,27 +200,141 @@ function createNewsCard(article) {
   `;
   
   card.addEventListener('click', () => {
-    // Handle article click - you'd navigate to article page
-    showToast(`Opening: ${article.title}`);
+    showArticleModal(article);
   });
   
   return card;
 }
 
 /**
+ * Load and render news articles from API
+ */
+async function loadNews(source = null) {
+  try {
+    // Show loading state
+    elements.newsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-secondary);">Loading articles...</div>';
+
+    // Map category to API source
+    const sourceMap = {
+      'all': null,
+      'tech': 'hackernews',
+      'news': 'wikipedia',
+      'community': 'reddit',
+      'turkey': null // Load all Turkish sources
+    };
+
+    const apiSource = sourceMap[source] || source;
+
+    // Fetch articles from API
+    const apiArticles = await fetchArticles(apiSource, 50);
+
+    // Transform to UI format
+    NEWS_DATA = apiArticles.map(transformArticle);
+
+    // Filter for Turkey category if selected
+    if (source === 'turkey') {
+      NEWS_DATA = NEWS_DATA.filter(a => a.source === 't24' || a.source === 'eksisozluk');
+    }
+
+    // Render articles
+    renderNews();
+  } catch (error) {
+    console.error('Error loading news:', error);
+    elements.newsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-error);">Failed to load articles. Please try again.</div>';
+  }
+}
+
+/**
  * Render news articles to the grid
  */
-function renderNews(category = 'all') {
-  const filtered = category === 'all' 
-    ? NEWS_DATA 
-    : NEWS_DATA.filter(a => a.category.toLowerCase() === category.toLowerCase());
-  
+function renderNews() {
   elements.newsGrid.innerHTML = '';
-  
-  filtered.forEach((article, index) => {
+
+  if (NEWS_DATA.length === 0) {
+    elements.newsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-secondary);">No articles available.</div>';
+    return;
+  }
+
+  NEWS_DATA.forEach((article, index) => {
     const card = createNewsCard(article);
     card.style.animationDelay = `${0.1 + index * 0.05}s`;
     elements.newsGrid.appendChild(card);
+  });
+}
+
+// =========================================
+// Article Modal
+// =========================================
+
+/**
+ * Show article in modal
+ */
+function showArticleModal(article) {
+  // Update modal content
+  elements.modalCategory.textContent = article.category;
+  elements.modalTitle.textContent = article.title;
+  elements.modalAuthor.textContent = article.author;
+  elements.modalDate.textContent = article.date;
+  elements.modalReadTime.textContent = article.readTime + ' read';
+  elements.modalImage.src = article.image;
+  elements.modalImage.alt = article.title;
+  elements.modalSourceLink.href = article.originalUrl;
+
+  // Update tags
+  elements.modalTags.innerHTML = '';
+  if (article.tags && article.tags.length > 0) {
+    article.tags.forEach(tag => {
+      const tagEl = document.createElement('span');
+      tagEl.className = 'article-modal-tag';
+      tagEl.textContent = tag;
+      elements.modalTags.appendChild(tagEl);
+    });
+  }
+
+  // Update content with proper paragraph formatting
+  const paragraphs = article.fullContent.split('\n\n').filter(p => p.trim());
+  elements.modalContent.innerHTML = paragraphs
+    .map(p => `<p>${p.trim()}</p>`)
+    .join('');
+
+  // Show modal
+  elements.articleModal.style.display = 'flex';
+  setTimeout(() => {
+    elements.articleModal.classList.add('show');
+  }, 10);
+
+  // Prevent body scroll
+  document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Hide article modal
+ */
+function hideArticleModal() {
+  elements.articleModal.classList.remove('show');
+  setTimeout(() => {
+    elements.articleModal.style.display = 'none';
+  }, 300);
+
+  // Restore body scroll
+  document.body.style.overflow = '';
+}
+
+/**
+ * Initialize modal handlers
+ */
+function initModal() {
+  // Close button
+  elements.modalClose?.addEventListener('click', hideArticleModal);
+
+  // Overlay click
+  elements.articleModal?.querySelector('.article-modal-overlay')?.addEventListener('click', hideArticleModal);
+
+  // Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && elements.articleModal.classList.contains('show')) {
+      hideArticleModal();
+    }
   });
 }
 
@@ -202,10 +348,10 @@ function initCategoryFilters() {
       // Update active state
       elements.categoryPills.forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
-      
-      // Filter news
+
+      // Load news for category
       currentCategory = pill.dataset.category;
-      renderNews(currentCategory);
+      loadNews(currentCategory);
     });
   });
 }
@@ -484,25 +630,47 @@ function simulateBreakingNews() {
 // Initialize App
 // =========================================
 
-function init() {
-  // Render initial news
-  renderNews();
-  
+async function init() {
+  // Load initial news from API
+  await loadNews('all');
+
   // Initialize features
+  initModal();
   initCategoryFilters();
   initNotifications();
   initInstallPrompt();
-  
+
   // Register service worker
   registerServiceWorker();
-  
-  // Demo: simulate breaking news
-  simulateBreakingNews();
-  
+
+  // Update featured article with latest
+  updateFeaturedArticle();
+
   console.log('AI News PWA initialized');
   console.log('PWA mode:', isPWA());
   console.log('iOS:', isIOS());
   console.log('Notifications supported:', notificationsSupported());
+}
+
+/**
+ * Update featured article with latest from feed
+ */
+function updateFeaturedArticle() {
+  if (NEWS_DATA.length === 0) return;
+
+  const featured = NEWS_DATA[0];
+  const featuredCard = document.querySelector('.featured-card');
+
+  if (featuredCard && featured) {
+    featuredCard.querySelector('.featured-card-image img').src = featured.image;
+    featuredCard.querySelector('.featured-card-title').textContent = featured.title;
+    featuredCard.querySelector('.featured-card-excerpt').textContent = featured.excerpt;
+
+    const button = featuredCard.querySelector('.btn-primary');
+    button.onclick = () => {
+      showArticleModal(featured);
+    };
+  }
 }
 
 // Start the app when DOM is ready

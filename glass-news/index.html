@@ -71,11 +71,10 @@
       <!-- Category Pills -->
       <div class="category-pills animate-in animate-delay-1">
         <button class="category-pill active" data-category="all">All</button>
-        <button class="category-pill" data-category="research">Research</button>
-        <button class="category-pill" data-category="industry">Industry</button>
-        <button class="category-pill" data-category="startups">Startups</button>
-        <button class="category-pill" data-category="ethics">Ethics</button>
-        <button class="category-pill" data-category="tools">Tools</button>
+        <button class="category-pill" data-category="tech">Tech</button>
+        <button class="category-pill" data-category="news">News</button>
+        <button class="category-pill" data-category="community">Community</button>
+        <button class="category-pill" data-category="turkey">Turkey</button>
       </div>
 
       <!-- Featured Article -->
@@ -147,6 +146,40 @@
 
   <!-- Toast Notification -->
   <div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+  <!-- Article Modal -->
+  <div class="article-modal" id="articleModal" style="display: none;">
+    <div class="article-modal-overlay"></div>
+    <div class="article-modal-content">
+      <button class="article-modal-close" id="modalClose" aria-label="Close">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+      <div class="article-modal-body">
+        <div class="article-modal-header">
+          <span class="article-modal-category" id="modalCategory"></span>
+          <h2 class="article-modal-title" id="modalTitle"></h2>
+          <div class="article-modal-meta">
+            <span id="modalAuthor"></span>
+            <span id="modalDate"></span>
+            <span id="modalReadTime"></span>
+          </div>
+        </div>
+        <div class="article-modal-image" id="modalImageContainer">
+          <img id="modalImage" alt="" loading="lazy">
+        </div>
+        <div class="article-modal-tags" id="modalTags"></div>
+        <div class="article-modal-text" id="modalContent"></div>
+        <div class="article-modal-footer">
+          <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" id="modalSourceLink">
+            Read Original Source
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

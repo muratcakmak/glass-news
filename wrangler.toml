@@ -13,10 +13,6 @@ bucket_name = "news-articles"
 binding = "NEWS_KV"
 id = "a1c6716fe6f54f6eae4783d0ed8def14"
 
-# Cloudflare AI for image generation
-[ai]
-binding = "AI"
-
 # Cron triggers
 # SF Time: 9 AM - 6 PM PST (17:00 - 02:00 UTC next day) for English sources
 # SF Time: 10 PM - 7 AM PST (06:00 - 15:00 UTC) for Turkish sources
@@ -35,8 +31,10 @@ crons = [
 # Environment variables (non-sensitive)
 RESEARCH_MODEL = "x-ai/grok-4.1-fast"
 
-# Secrets (set via: wrangler secret put SECRET_NAME)
-# OPENROUTER_API_KEY
+# Secrets (set via: bunx wrangler secret put SECRET_NAME)
+# OPENROUTER_API_KEY - For Grok AI content transformation
+# GEMINI_API_KEY - For Gemini 2.5 Flash image generation
+# OPENAI_API_KEY - For DALL-E image generation (Legacy)
 # REDDIT_CLIENT_ID
 # REDDIT_CLIENT_SECRET
 # SCRAPEDO_API_KEY (if needed for scraping)
