@@ -213,17 +213,33 @@ export default {
 				return;
 			}
 
-			// Transform and save all articles
+			// Transform and save all articles with robust fallback
 			console.log(`Processing ${allArticles.length} total articles...`);
 			const processedArticles: NewsArticle[] = [];
 
 			for (const article of allArticles) {
 				try {
+					console.log(`[Scheduled] Transforming ${article.id}...`);
 					const transformed = await transformContent(article, env);
+
+					console.log(`[Scheduled] Saving ${article.id}...`);
 					await saveArticleToR2(transformed, env);
 					processedArticles.push(transformed);
 				} catch (error) {
 					console.error(`Error processing article ${article.id}:`, error);
+					// Fallback: Save original article if transformation/saving fails
+					try {
+						console.log(
+							`[Scheduled] Fallback: Saving original ${article.id}...`,
+						);
+						await saveArticleToR2(article, env);
+						processedArticles.push(article);
+					} catch (fallbackError) {
+						console.error(
+							`CRITICAL: Failed to save fallback for ${article.id}:`,
+							fallbackError,
+						);
+					}
 				}
 			}
 
@@ -233,7 +249,10 @@ export default {
 
 			// Send Push Notifications for new articles
 			if (processedArticles.length > 0) {
-				await sendPushNotifications(processedArticles, env);
+				console.log(
+					`Queueing push notification for ${processedArticles.length} articles...`,
+				);
+				ctx.waitUntil(sendPushNotifications(processedArticles, env));
 			}
 		} catch (error) {
 			console.error("Error in scheduled task:", error);
