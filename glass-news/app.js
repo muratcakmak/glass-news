@@ -8,7 +8,7 @@
 // =========================================
 
 const API_URL = "https://news-data.omc345.workers.dev";
-const APP_VERSION = "2.3.1";
+const APP_VERSION = "2.2.7-theme-fix";
 const VAPID_PUBLIC_KEY =
 	"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM";
 ("BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLcLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM");
@@ -359,7 +359,7 @@ const SEO = {
 		this.setMeta("article:section", article.category);
 		if (article.tags && article.tags.length > 0) {
 			// Note: Multiple tags require special handling
-			article.tags.slice(0, 5).forEach(tag => {
+			article.tags.slice(0, 5).forEach((tag) => {
 				this.addMetaTag("article:tag", tag);
 			});
 		}
@@ -391,35 +391,35 @@ const SEO = {
 		this.injectSchema({
 			"@context": "https://schema.org",
 			"@type": "NewsArticle",
-			"headline": article.title,
-			"image": {
+			headline: article.title,
+			image: {
 				"@type": "ImageObject",
-				"url": article.image,
-				"width": 1200,
-				"height": 630
+				url: article.image,
+				width: 1200,
+				height: 630,
 			},
-			"datePublished": new Date().toISOString(),
-			"dateModified": new Date().toISOString(),
-			"author": {
+			datePublished: new Date().toISOString(),
+			dateModified: new Date().toISOString(),
+			author: {
 				"@type": "Person",
-				"name": article.author || "Glass News Editor",
-				"url": "https://glass-news.pages.dev"
+				name: article.author || "Glass News Editor",
+				url: "https://glass-news.pages.dev",
 			},
-			"publisher": {
+			publisher: {
 				"@type": "Organization",
-				"name": "Glass News"
+				name: "Glass News",
 			},
-			"description": article.excerpt,
-			"articleBody": article.fullContent,
-			"keywords": article.tags ? article.tags.join(", ") : "",
-			"articleSection": article.category,
-			"isAccessibleForFree": "true",
-			"mainEntityOfPage": {
+			description: article.excerpt,
+			articleBody: article.fullContent,
+			keywords: article.tags ? article.tags.join(", ") : "",
+			articleSection: article.category,
+			isAccessibleForFree: "true",
+			mainEntityOfPage: {
 				"@type": "WebPage",
-				"@id": window.location.href
+				"@id": window.location.href,
 			},
-			"url": window.location.href,
-			"inLanguage": "en-US"
+			url: window.location.href,
+			inLanguage: "en-US",
 		});
 	},
 
@@ -430,7 +430,10 @@ const SEO = {
 			"Glass News - Expertly curated news aggregation with beautiful glassmorphism UI",
 		);
 		this.setMeta("og:title", "Glass News");
-		this.setMeta("og:description", "Expertly curated news aggregation with beautiful glassmorphism UI");
+		this.setMeta(
+			"og:description",
+			"Expertly curated news aggregation with beautiful glassmorphism UI",
+		);
 		this.setMeta("og:type", "website");
 		this.removeSchema();
 	},
@@ -1388,13 +1391,13 @@ function initThemeListener() {
  */
 async function fetchVersionInfo() {
 	try {
-		const response = await fetch('version.json?' + Date.now()); // Cache bust
+		const response = await fetch("version.json?" + Date.now()); // Cache bust
 		if (response.ok) {
 			VERSION_INFO = await response.json();
 			updateVersionDisplay();
 		}
 	} catch (error) {
-		console.log('Could not load version info:', error);
+		console.log("Could not load version info:", error);
 	}
 }
 
@@ -1402,27 +1405,30 @@ async function fetchVersionInfo() {
  * Update version display in UI
  */
 function updateVersionDisplay() {
-	const versionElements = document.querySelectorAll('.app-version');
-	versionElements.forEach(el => {
+	const versionElements = document.querySelectorAll(".app-version");
+	versionElements.forEach((el) => {
 		el.textContent = `v${VERSION_INFO.version}`;
 	});
 
 	// Update navbar version to be clickable
-	const navVersion = document.querySelector('.navbar-version');
+	const navVersion = document.querySelector(".navbar-version");
 	if (navVersion && VERSION_INFO.buildTime) {
 		const buildDate = new Date(VERSION_INFO.buildTime);
-		const formattedDate = buildDate.toLocaleString('en-US', {
-			month: 'short',
-			day: 'numeric',
-			year: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
+		const formattedDate = buildDate.toLocaleString("en-US", {
+			month: "short",
+			day: "numeric",
+			year: "numeric",
+			hour: "2-digit",
+			minute: "2-digit",
 		});
 
 		navVersion.title = `Build: ${formattedDate} UTC`;
-		navVersion.style.cursor = 'pointer';
-		navVersion.addEventListener('click', () => {
-			showToast(`v${VERSION_INFO.version} • Built ${formattedDate} UTC`, 'default');
+		navVersion.style.cursor = "pointer";
+		navVersion.addEventListener("click", () => {
+			showToast(
+				`v${VERSION_INFO.version} • Built ${formattedDate} UTC`,
+				"default",
+			);
 		});
 	}
 }
