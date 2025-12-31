@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="description" content="AI News - Your AI-powered news application with real-time updates">
+  <meta name="mobile-web-app-capable" content="yes">
+  
+  <!-- iOS PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AI News">
+  
+  <!-- Icons -->
+  <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.svg">
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <title>AI News</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- SVG Filters for Liquid Glass Effect -->
+  <svg style="display: none;">
+    <defs>
+      <filter id="liquid-distortion">
+        <feTurbulence type="fractalNoise" baseFrequency="0.01 0.02" numOctaves="2" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="/" class="navbar-brand">AI News</a>
+      <div class="navbar-actions">
+        <button class="btn btn-icon" id="searchToggle" aria-label="Search">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+        </button>
+        <button class="btn btn-icon" id="notificationBtn" aria-label="Notifications">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="page">
+    <div class="container">
+      <!-- Page Header -->
+      <header class="page-header animate-in">
+        <p class="text-label">Today's Intelligence</p>
+        <h1 class="page-title">AI News</h1>
+      </header>
+
+      <!-- Category Pills -->
+      <div class="category-pills animate-in animate-delay-1">
+        <button class="category-pill active" data-category="all">All</button>
+        <button class="category-pill" data-category="research">Research</button>
+        <button class="category-pill" data-category="industry">Industry</button>
+        <button class="category-pill" data-category="startups">Startups</button>
+        <button class="category-pill" data-category="ethics">Ethics</button>
+        <button class="category-pill" data-category="tools">Tools</button>
+      </div>
+
+      <!-- Featured Article -->
+      <article class="featured-card animate-in animate-delay-2" data-article-id="featured">
+        <div class="featured-card-image">
+          <img src="https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80" alt="AI visualization" loading="eager">
+        </div>
+        <div class="featured-card-content">
+          <div class="featured-card-label">
+            <span class="dot"></span>
+            <span class="text-label">Breaking</span>
+          </div>
+          <h2 class="featured-card-title">OpenAI Announces GPT-5 with Revolutionary Reasoning Capabilities</h2>
+          <p class="featured-card-excerpt">The latest model demonstrates unprecedented performance in complex problem-solving, mathematical reasoning, and multi-step planning tasks, marking a significant leap in AI capabilities.</p>
+          <button class="btn btn-primary">Read Full Story</button>
+        </div>
+      </article>
+
+      <!-- News Grid -->
+      <section class="news-section">
+        <h2 class="section-title">Latest Stories</h2>
+        <div class="news-grid" id="newsGrid">
+          <!-- News cards will be rendered here -->
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Notification Permission Banner -->
+  <div class="notification-banner" id="notificationBanner" style="display: none;">
+    <div class="notification-banner-content">
+      <div class="notification-banner-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+      </div>
+      <div class="notification-banner-text">
+        <p class="notification-banner-title">Stay Updated</p>
+        <p class="notification-banner-description">Get notified about breaking AI news and updates.</p>
+      </div>
+      <div class="notification-banner-actions">
+        <button class="btn" id="notificationDismiss">Later</button>
+        <button class="btn btn-primary" id="notificationEnable">Enable</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Install PWA Banner -->
+  <div class="install-banner" id="installBanner" style="display: none;">
+    <div class="notification-banner-content">
+      <div class="notification-banner-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </div>
+      <div class="notification-banner-text">
+        <p class="notification-banner-title">Install AI News</p>
+        <p class="notification-banner-description">Add to your home screen for the best experience.</p>
+      </div>
+      <div class="notification-banner-actions">
+        <button class="btn" id="installDismiss">Not Now</button>
+        <button class="btn btn-primary" id="installAccept">Install</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# Local development environment variables
+# Copy this to .dev.vars and fill in your actual keys
+# .dev.vars is in .gitignore and won't be committed
+
+# OpenRouter API Key for AI content transformation
+OPENROUTER_API_KEY=your_key_here
+
+# Reddit API Credentials (optional - has fallback)
+REDDIT_CLIENT_ID=your_client_id
+REDDIT_CLIENT_SECRET=your_client_secret
+
+# ScrapeDo API Key (needed for Turkish sites: T24, Eksisozluk)
+SCRAPEDO_API_KEY=your_scrapedo_key
+
+# Serper API Key (optional - for news search)
+SERPER_API_KEY=your_serper_key
+
+# AI Model to use
+RESEARCH_MODEL=openai/gpt-4o-mini
