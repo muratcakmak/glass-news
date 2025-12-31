@@ -6,17 +6,17 @@
   
   <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#0a0a0f">
-  <meta name="description" content="AI News - Your AI-powered news application with real-time updates">
+  <meta name="description" content="Glass News - Your Glass-powered news application with real-time updates">
   <meta name="mobile-web-app-capable" content="yes">
   
   <!-- iOS PWA Meta Tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="AI News">
+  <meta name="apple-mobile-web-app-title" content="Glass News">
   
   <!-- Icons -->
-  <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.svg">
+  <link rel="icon" type="image/png" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
   
   <!-- Fonts -->
@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <title>AI News</title>
+  <title>Glass News</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -41,14 +41,26 @@
   <!-- Navigation -->
   <nav class="navbar">
     <div class="navbar-inner">
-      <a href="/" class="navbar-brand">AI News</a>
-      <div class="navbar-actions">
-        <button class="btn btn-icon" id="searchToggle" aria-label="Search">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <a href="/" class="navbar-brand">Glass News</a>
+      
+      <div class="navbar-search">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
-        </button>
+          <input type="text" id="searchInput" placeholder="Search news..." aria-label="Search news">
+          <button id="searchClear" class="search-clear" aria-label="Clear search" style="display: none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="navbar-actions">
+
         <button class="btn btn-icon" id="notificationBtn" aria-label="Notifications">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -65,22 +77,33 @@
       <!-- Page Header -->
       <header class="page-header animate-in">
         <p class="text-label">Today's Intelligence</p>
-        <h1 class="page-title">AI News</h1>
+        <h1 class="page-title">Glass News</h1>
       </header>
 
       <!-- Category Pills -->
-      <div class="category-pills animate-in animate-delay-1">
-        <button class="category-pill active" data-category="all">All</button>
-        <button class="category-pill" data-category="tech">Tech</button>
-        <button class="category-pill" data-category="news">News</button>
-        <button class="category-pill" data-category="community">Community</button>
-        <button class="category-pill" data-category="turkey">Turkey</button>
+      <div class="category-pills-container">
+        <div class="category-pills animate-in animate-delay-1">
+          <button class="category-pill active" data-category="all">All</button>
+          <button class="category-pill" data-category="tech">Tech</button>
+          <button class="category-pill" data-category="news">News</button>
+          <button class="category-pill" data-category="community">Community</button>
+          <button class="category-pill" data-category="turkey">Turkey</button>
+        </div>
+        
+        <div class="sort-controls animate-in animate-delay-1">
+          <button class="btn btn-sm sort-btn" id="sortBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M6 12h12M10 18h4"/>
+            </svg>
+            <span id="sortLabel">Latest</span>
+          </button>
+        </div>
       </div>
 
       <!-- Featured Article -->
       <article class="featured-card animate-in animate-delay-2" data-article-id="featured">
         <div class="featured-card-image">
-          <img src="https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80" alt="AI visualization" loading="eager">
+          <img src="https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80" alt="Glass visualization" loading="eager">
         </div>
         <div class="featured-card-content">
           <div class="featured-card-label">
@@ -114,7 +137,7 @@
       </div>
       <div class="notification-banner-text">
         <p class="notification-banner-title">Stay Updated</p>
-        <p class="notification-banner-description">Get notified about breaking AI news and updates.</p>
+        <p class="notification-banner-description">Get notified about breaking Glass news and updates.</p>
       </div>
       <div class="notification-banner-actions">
         <button class="btn" id="notificationDismiss">Later</button>
@@ -134,7 +157,7 @@
         </svg>
       </div>
       <div class="notification-banner-text">
-        <p class="notification-banner-title">Install AI News</p>
+        <p class="notification-banner-title">Install Glass News</p>
         <p class="notification-banner-description">Add to your home screen for the best experience.</p>
       </div>
       <div class="notification-banner-actions">
@@ -158,24 +181,38 @@
         </svg>
       </button>
       <div class="article-modal-body">
-        <div class="article-modal-header">
-          <span class="article-modal-category" id="modalCategory"></span>
-          <h2 class="article-modal-title" id="modalTitle"></h2>
-          <div class="article-modal-meta">
-            <span id="modalAuthor"></span>
-            <span id="modalDate"></span>
-            <span id="modalReadTime"></span>
+        <div class="article-modal-image-container" id="modalImageContainer">
+          <img id="modalImage" alt="" loading="lazy" class="article-modal-image">
+        </div>
+        
+        <div class="article-modal-container">
+          <div class="article-modal-header">
+            <span class="article-modal-category" id="modalCategory"></span>
+            <h2 class="article-modal-title" id="modalTitle"></h2>
+            <div class="article-modal-meta">
+              <span id="modalAuthor"></span>
+              <span id="modalDate"></span>
+              <span id="modalReadTime"></span>
+            </div>
           </div>
-        </div>
-        <div class="article-modal-image" id="modalImageContainer">
-          <img id="modalImage" alt="" loading="lazy">
-        </div>
-        <div class="article-modal-tags" id="modalTags"></div>
-        <div class="article-modal-text" id="modalContent"></div>
-        <div class="article-modal-footer">
-          <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" id="modalSourceLink">
-            Read Original Source
-          </a>
+          
+          <div class="article-modal-tags" id="modalTags"></div>
+          
+          <div class="article-modal-text" id="modalContent"></div>
+          
+          <div class="article-modal-footer">
+            <button class="btn btn-share" id="modalShare">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                <polyline points="16 6 12 2 8 6"/>
+                <line x1="12" y1="2" x2="12" y2="15"/>
+              </svg>
+              Share
+            </button>
+            <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" id="modalSourceLink">
+              Read Original Source
+            </a>
+          </div>
         </div>
       </div>
     </div>

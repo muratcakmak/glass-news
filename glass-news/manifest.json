@@ -1,33 +1,36 @@
 {
-  "name": "AI News",
-  "short_name": "AI News",
-  "description": "Your AI-powered news application with real-time updates and breaking news notifications",
+  "name": "Glass News",
+  "short_name": "Glass News",
+  "description": "Your Glass-powered news application with real-time updates and breaking news notifications",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#0a0a0f",
   "background_color": "#0a0a0f",
-  "categories": ["news", "technology"],
+  "categories": [
+    "news",
+    "technology"
+  ],
   "lang": "en",
   "dir": "ltr",
   "icons": [
     {
-      "src": "icons/icon-192.svg",
+      "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-512.svg",
+      "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "icons/favicon.png",
+      "sizes": "64x64",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],
@@ -35,32 +38,28 @@
     {
       "name": "Latest News",
       "short_name": "Latest",
-      "description": "View the latest AI news",
+      "description": "View the latest Glass news",
       "url": "/?category=latest",
-      "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Research",
       "short_name": "Research",
-      "description": "AI research updates",
+      "description": "Glass News updates",
       "url": "/?category=research",
-      "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "screenshots/mobile.png",
-      "sizes": "1080x1920",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "AI News mobile view"
-    },
-    {
-      "src": "screenshots/desktop.png",
-      "sizes": "1920x1080",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "AI News desktop view"
+      "icons": [
+        {
+          "src": "icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
     }
   ],
   "related_applications": [],

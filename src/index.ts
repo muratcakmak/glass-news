@@ -5,6 +5,7 @@ import { crawlHackerNews } from "./crawlers/hackernews";
 import { crawlWikipedia } from "./crawlers/wikipedia";
 import { crawlReddit } from "./crawlers/reddit";
 import { transformContent } from "./transformers/content";
+import { generateThumbnail } from "./transformers/thumbnail";
 import {
 	saveArticleToR2,
 	listArticles,
@@ -48,6 +49,47 @@ export default {
 			return handleManualCrawl(request, env, ctx, corsHeaders);
 		}
 
+		if (url.pathname === "/api/clean" && request.method === "POST") {
+			// Clean KV store and optionally R2 bucket
+			return handleCleanStorage(env, corsHeaders);
+		}
+
+		// Isolated Image Gen Test Route
+		if (url.pathname === "/test-gen") {
+			const mockArticle: NewsArticle = {
+				id: "test-isolation-" + Date.now(),
+				source: "hackernews",
+				originalTitle: "Apple Reveals New Glass Technology",
+				originalContent:
+					"Apple has announced a new type of liquid glass that is both durable and flexible.",
+				originalUrl: "https://example.com",
+				crawledAt: new Date().toISOString(),
+				language: "en",
+			};
+
+			try {
+				console.log("Testing generation for:", mockArticle.id);
+				const imageBlob = await generateThumbnail(mockArticle, env);
+
+				if (imageBlob) {
+					return new Response(imageBlob, {
+						headers: {
+							"Content-Type": imageBlob.type,
+							"X-Generated-Size": imageBlob.size.toString(),
+						},
+					});
+				} else {
+					return new Response("Generation returned null (check logs)", {
+						status: 500,
+					});
+				}
+			} catch (e: any) {
+				return new Response("Generation failed: " + e.toString(), {
+					status: 500,
+				});
+			}
+		}
+
 		// Health check
 		if (url.pathname === "/health") {
 			return new Response(
@@ -56,11 +98,6 @@ export default {
 					headers: { ...corsHeaders, "Content-Type": "application/json" },
 				},
 			);
-		}
-
-		// Test AI image generation
-		if (url.pathname === "/test-ai-image") {
-			return handleTestAIImage(env, corsHeaders);
 		}
 
 		return new Response("Not Found", { status: 404 });
@@ -85,45 +122,45 @@ export default {
 		const allArticles: NewsArticle[] = [];
 
 		try {
-			if (shouldCrawlTurkish) {
-				console.log("Crawling Turkish sources...");
-				const [t24Articles, eksiArticles] = await Promise.all([
-					crawlT24(env),
-					crawlEksisozluk(env),
-				]);
+			// ONLY CRAWL EKSISOZLUK FOR NOW
+			console.log("Crawling eksisozluk...");
+			const eksiArticles = await crawlEksisozluk(env);
 
-				// Fetch full content for articles
-				for (const article of t24Articles) {
+			// Fetch content using SERPER for each article
+			console.log(
+				`Fetching content for ${eksiArticles.length} eksisozluk articles...`,
+			);
+			for (const article of eksiArticles) {
+				if (!article.originalContent) {
+					console.log(`[Eksi] Fetching: ${article.originalUrl}`);
+					article.originalContent = await fetchEksisozlukDetail(
+						article.originalUrl,
+						env,
+						article.originalTitle,
+					);
+					// If content fetching fails, use title as fallback
 					if (!article.originalContent) {
-						article.originalContent = await fetchT24ArticleDetail(
-							article.originalUrl,
-							env,
+						article.originalContent = article.originalTitle;
+						console.warn(
+							`[Eksi] Using title as content fallback for ${article.id}`,
 						);
 					}
 				}
-
-				for (const article of eksiArticles) {
-					if (!article.originalContent) {
-						article.originalContent = await fetchEksisozlukDetail(
-							article.originalUrl,
-							env,
-						);
-					}
-				}
-
-				allArticles.push(...t24Articles, ...eksiArticles);
 			}
 
-			if (shouldCrawlEnglish) {
-				console.log("Crawling English sources...");
-				const [hnArticles, wikiArticles, redditArticles] = await Promise.all([
-					crawlHackerNews(),
-					crawlWikipedia(),
-					crawlReddit(env),
-				]);
+			allArticles.push(...eksiArticles);
+			console.log(`Crawled ${eksiArticles.length} eksisozluk articles`);
 
-				allArticles.push(...hnArticles, ...wikiArticles, ...redditArticles);
-			}
+			// TODO: Re-enable other sources later
+			// if (shouldCrawlEnglish) {
+			// 	console.log("Crawling English sources...");
+			// 	const [hnArticles, wikiArticles, redditArticles] = await Promise.all([
+			// 		crawlHackerNews(),
+			// 		crawlWikipedia(),
+			// 		crawlReddit(env),
+			// 	]);
+			// 	allArticles.push(...hnArticles, ...wikiArticles, ...redditArticles);
+			// }
 
 			if (allArticles.length === 0) {
 				console.log("No articles to process at this time");
@@ -245,68 +282,48 @@ async function handleManualCrawl(
 
 		const allArticles: NewsArticle[] = [];
 
-		if (
-			sources.includes("all") ||
-			sources.includes("turkish") ||
-			sources.includes("t24")
-		) {
-			const t24Articles = await crawlT24(env);
-			// Fetch full content for articles
-			for (const article of t24Articles) {
+		// ONLY EKSISOZLUK FOR NOW
+		console.log("Crawling Eksisozluk...");
+		const eksiArticles = await crawlEksisozluk(env);
+
+		// Fetch content using SERPER for each article
+		console.log(
+			`Fetching content for ${eksiArticles.length} eksisozluk articles...`,
+		);
+		for (const article of eksiArticles) {
+			if (!article.originalContent) {
+				console.log(`[Eksi] Fetching: ${article.originalUrl}`);
+				article.originalContent = await fetchEksisozlukDetail(
+					article.originalUrl,
+					env,
+					article.originalTitle,
+				);
+				// If content fetching fails, use title as fallback
 				if (!article.originalContent) {
-					article.originalContent = await fetchT24ArticleDetail(
-						article.originalUrl,
-						env,
+					article.originalContent = article.originalTitle;
+					console.warn(
+						`[Eksi] Using title as content fallback for ${article.id}`,
 					);
 				}
 			}
-			allArticles.push(...t24Articles);
 		}
 
-		if (
-			sources.includes("all") ||
-			sources.includes("turkish") ||
-			sources.includes("eksisozluk")
-		) {
-			const eksiArticles = await crawlEksisozluk(env);
-			// Fetch full content for articles
-			for (const article of eksiArticles) {
-				if (!article.originalContent) {
-					article.originalContent = await fetchEksisozlukDetail(
-						article.originalUrl,
-						env,
-					);
-				}
-			}
-			allArticles.push(...eksiArticles);
-		}
+		allArticles.push(...eksiArticles);
+		console.log(`Crawled ${eksiArticles.length} eksisozluk articles`);
 
-		if (
-			sources.includes("all") ||
-			sources.includes("english") ||
-			sources.includes("hackernews")
-		) {
-			const hnArticles = await crawlHackerNews();
-			allArticles.push(...hnArticles);
-		}
-
-		if (
-			sources.includes("all") ||
-			sources.includes("english") ||
-			sources.includes("wikipedia")
-		) {
-			const wikiArticles = await crawlWikipedia();
-			allArticles.push(...wikiArticles);
-		}
-
-		if (
-			sources.includes("all") ||
-			sources.includes("english") ||
-			sources.includes("reddit")
-		) {
-			const redditArticles = await crawlReddit(env);
-			allArticles.push(...redditArticles);
-		}
+		// TODO: Re-enable other sources later
+		// if (sources.includes("hackernews")) {
+		// 	const hnArticles = await crawlHackerNews();
+		// 	allArticles.push(...hnArticles);
+		// }
+		// if (sources.includes("wikipedia")) {
+		// 	const wikiArticles = await crawlWikipedia();
+		// 	allArticles.push(...wikiArticles);
+		// }
+		// if (sources.includes("reddit")) {
+		// 	const redditArticles = await crawlReddit(env);
+		// 	allArticles.push(...redditArticles);
+		// }
 
 		// Process articles in background to avoid timeout
 		ctx.waitUntil(
@@ -345,6 +362,45 @@ async function handleManualCrawl(
 		);
 	} catch (error) {
 		console.error("Error in manual crawl:", error);
+		return new Response(JSON.stringify({ error: "Internal server error" }), {
+			status: 500,
+			headers: { ...corsHeaders, "Content-Type": "application/json" },
+		});
+	}
+}
+
+async function handleCleanStorage(
+	env: Env,
+	corsHeaders: Record<string, string>,
+): Promise<Response> {
+	try {
+		console.log("Cleaning KV store...");
+
+		// Clean all KV indexes
+		const sources = ["hackernews", "wikipedia", "reddit", "eksisozluk", "t24"];
+		const keysToDelete: string[] = ["index:all"];
+
+		for (const source of sources) {
+			keysToDelete.push(`index:${source}`);
+		}
+
+		console.log(`Deleting ${keysToDelete.length} KV keys:`, keysToDelete);
+
+		for (const key of keysToDelete) {
+			await env.NEWS_KV.delete(key);
+			console.log(`✓ Deleted ${key}`);
+		}
+
+		return new Response(
+			JSON.stringify({
+				success: true,
+				message: "KV store cleaned successfully",
+				deletedKeys: keysToDelete,
+			}),
+			{ headers: { ...corsHeaders, "Content-Type": "application/json" } },
+		);
+	} catch (error) {
+		console.error("Error cleaning storage:", error);
 		return new Response(JSON.stringify({ error: "Internal server error" }), {
 			status: 500,
 			headers: { ...corsHeaders, "Content-Type": "application/json" },

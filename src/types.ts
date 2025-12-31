@@ -16,7 +16,7 @@ export interface NewsArticle {
 export interface Env {
 	NEWS_BUCKET: R2Bucket;
 	NEWS_KV: KVNamespace;
-	AI?: any; // Cloudflare AI binding for image generation
+	AI?: any;
 	OPENROUTER_API_KEY?: string;
 	REDDIT_CLIENT_ID?: string;
 	REDDIT_CLIENT_SECRET?: string;

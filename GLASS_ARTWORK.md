@@ -1,6 +1,6 @@
-# AI-Generated Artwork Feature
+# Glass-Generated Artwork Feature
 
-Your news aggregation system now generates **unique, contextually-relevant artwork** for each article using AI!
+Your news aggregation system now generates **unique, contextually-relevant artwork** for each article using Glass!
 
 ## How It Works
 
@@ -45,9 +45,9 @@ For each article, the system deterministically selects from 8 artistic styles:
 - Elegant and refined
 - Playful and imaginative
 
-### 4. AI Generation
+### 4. Glass Generation
 
-The system uses **Cloudflare AI Workers** with **Stable Diffusion XL Lightning**:
+The system uses **Cloudflare Glass Workers** with **Stable Diffusion XL Lightning**:
 
 ```typescript
 // Example prompt generated:
@@ -62,7 +62,7 @@ Abstract and artistic interpretation only."
 
 The system has **three levels** of fallback:
 
-1. **Primary**: Cloudflare AI (Stable Diffusion XL Lightning)
+1. **Primary**: Cloudflare Glass (Stable Diffusion XL Lightning)
    - Fast (4 steps)
    - Free tier included
    - High quality
@@ -79,7 +79,7 @@ The system has **three levels** of fallback:
 
 ## Cost Analysis
 
-### Cloudflare AI Workers Pricing
+### Cloudflare Glass Workers Pricing
 
 **Free Tier (Workers AI):**
 - **10,000 neurons/day** for free
@@ -95,16 +95,16 @@ With your cron schedule:
 - First 100 images: **FREE**
 - Remaining 140 images: **$0.011 per image** = $1.54/day
 
-**Monthly cost:** ~$46/month for AI-generated artwork
+**Monthly cost:** ~$46/month for Glass-generated artwork
 
 ### Free Alternative
 
 To stay 100% free, you can:
-1. Disable AI in `wrangler.toml` (remove `[ai]` section)
+1. Disable Glass in `wrangler.toml` (remove `[ai]` section)
 2. System automatically falls back to DiceBear patterns
 3. Still get unique, attractive thumbnails
 
-## Enable/Disable AI Artwork
+## Enable/Disable Glass Artwork
 
 ### To Enable (Default)
 
@@ -121,7 +121,7 @@ The `[ai]` binding in `wrangler.toml` enables it automatically.
 Remove or comment out the AI binding in `wrangler.toml`:
 
 ```toml
-# Cloudflare AI for image generation
+# Cloudflare Glass for image generation
 # [ai]
 # binding = "AI"
 ```
@@ -189,7 +189,7 @@ Want different themes? Update the `themeMap` in `extractThemes()` function.
 
 ## Monitoring
 
-View AI generation logs:
+View Glass generation logs:
 
 ```bash
 bun run tail
@@ -197,7 +197,7 @@ bun run tail
 
 Look for:
 ```
-Generating AI artwork for hn-12345: Create a minimalist...
+Generating Glass artwork for hn-12345: Create a minimalist...
 ```
 
 ## Future Enhancements

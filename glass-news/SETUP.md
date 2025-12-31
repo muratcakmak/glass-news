@@ -1,6 +1,6 @@
 # Glass News - Setup Guide
 
-Beautiful PWA UI for your AI-powered news aggregation system.
+Beautiful PWA UI for your Glass-powered news aggregation system.
 
 ## 🎨 What's Connected
 
@@ -47,7 +47,7 @@ Then open: **http://localhost:3000**
 
 ✨ **Glassmorphism Design** - Beautiful frosted glass effects
 📰 **Live News Feed** - Real-time from your API
-🎨 **AI-Transformed Content** - Orhan Pamuk literary style
+🎨 **Glass-Transformed Content** - Orhan Pamuk literary style
 🌍 **Turkish → English** - Automatic translation
 📱 **PWA** - Install as native app
 🔔 **Notifications** - Breaking news alerts (optional)
@@ -99,7 +99,7 @@ UI Card Format:
   title: "Literary English title",
   excerpt: "First 200 chars...",
   image: "/thumbnails/123.png",
-  author: "AI Curated",
+  author: "Curated",
   date: "2h ago",
   readTime: "5 min"
 }
@@ -134,9 +134,9 @@ netlify deploy --prod
 
 ## 🎉 You're All Set!
 
-Your beautiful news UI is connected to your AI-powered backend. All articles are:
+Your beautiful news UI is connected to your Glass-powered backend. All articles are:
 - ✅ Fetched from 5 sources
-- ✅ Transformed with Grok AI
+- ✅ Transformed with Glass Intelligence
 - ✅ Translated to English (Turkish sources)
 - ✅ Styled like Orhan Pamuk + New Yorker
 - ✅ Ready for your users!

@@ -1,6 +1,6 @@
-# AI News PWA
+# Glass News PWA
 
-A Progressive Web App for AI news with Apple-style Liquid Glass design, local notifications, and offline support.
+A Progressive Web App for Glass news with Apple-style Liquid Glass design, local notifications, and offline support.
 
 ## Features
 
@@ -42,7 +42,7 @@ Upload all files to any static hosting service:
 ## File Structure
 
 ```
-ai-news-pwa/
+glass-news-pwa/
 ├── index.html          # Main HTML file
 ├── styles.css          # All styles (liquid glass, layout, components)
 ├── app.js              # Main JavaScript (rendering, notifications, PWA)
@@ -91,7 +91,7 @@ await requestNotificationPermission();
 
 // Show a notification
 showLocalNotification('Breaking News!', {
-  body: 'New AI model released',
+  body: 'New Glass model released',
   icon: 'icons/icon-192.png'
 });
 
@@ -149,7 +149,7 @@ webpush.setVapidDetails(
 // Send push notification
 await webpush.sendNotification(subscription, JSON.stringify({
   title: 'Breaking News',
-  body: 'New AI development announced',
+  body: 'New Glass development announced',
   url: '/article/123'
 }));
 ```

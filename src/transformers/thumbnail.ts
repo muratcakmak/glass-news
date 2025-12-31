@@ -108,21 +108,43 @@ export async function generateThumbnail(
 	article: NewsArticle,
 	env?: Env,
 ): Promise<Blob | null> {
+	console.log(`[Thumbnail] generateThumbnail called for ${article.id}`);
+
+	// Validate environment and API key
 	if (!env || !env.GEMINI_API_KEY) {
-		console.error("GEMINI_API_KEY not configured");
+		console.warn(
+			`[Thumbnail] GEMINI_API_KEY missing for ${article.id}. Env present: ${!!env}, Key present: ${!!env?.GEMINI_API_KEY}`,
+		);
 		return null;
 	}
 
 	try {
+		console.log(
+			`[Thumbnail] Calling Gemini image generation for ${article.id}...`,
+		);
+		const startTime = Date.now();
 		const geminiGenerated = await generateGeminiThumbnail(article, env);
+		const duration = Date.now() - startTime;
+
 		if (geminiGenerated) {
+			console.log(
+				`[Thumbnail] ✓ Success for ${article.id}. Size: ${geminiGenerated.size} bytes, Type: ${geminiGenerated.type}, Duration: ${duration}ms`,
+			);
 			return geminiGenerated;
+		} else {
+			console.warn(
+				`[Thumbnail] ✗ Generation returned null for ${article.id} after ${duration}ms`,
+			);
 		}
 	} catch (error) {
-		console.error("Gemini thumbnail generation failed:", error);
+		console.error(
+			`[Thumbnail] ✗ Exception during generation for ${article.id}:`,
+			error instanceof Error ? error.message : error,
+		);
 	}
 
-	// Fallback to null - will use simple URL placeholder
+	// Fallback to null - caller will use simple URL placeholder
+	console.log(`[Thumbnail] Using fallback for ${article.id}`);
 	return null;
 }
 
@@ -143,10 +165,29 @@ async function generateGeminiThumbnail(
 		).slice(0, 500);
 		const themes = extractThemes(title, content);
 
-		// Improved System Prompt for Apple Liquid Glass aesthetic derived from research
-		const prompt = `Generate a 1024x1024 square thumbnail in strict Apple Liquid Glass aesthetic: frosted glassmorphism with translucent refractive blur (20px), subtle white light border (1px rgba(255,255,255,0.2)), premium minimal curves (24px radius), generous whitespace, vibrant gradient backdrop. Overlay ${themes} as sharp central motif with dynamic depth layering, iOS app icon vibe, high contrast readability, no text/logos, clean hardware polish. Reference context: ${title}`;
+		// Apple-style Editorial Illustration Prompt
+		// Derived from "Midjourney style editorial illustration", "corporate memphis but premium", "abstract figures"
+		const prompt = `Create a premium, editorial-style illustration for a news article titled: "${title}".
 
-		console.log(`Generating Gemini image for ${article.id}...`);
+Style Guide:
+- Aesthetic: Apple News / New York Times Magazine cover style.
+- Visuals: Abstract, minimalist figures (NO realistic faces, NO facial features). Use silhouettes or soft shapes to represent people.
+- Composition: Clean, spacious, using negative space effectively. Balanced and harmonious.
+- Color Palette: Sophisticated, muted tones (pastels, soft blues, creams, stone greys) with one vibrant accent color (like a deep coral or electric blue).
+- Texture: Soft gradients, smooth vector-like shapes with subtle grain or noise for a "printed" feel.
+- Mood: Intellectual, modern, calm, and trustworthy.
+- Elements: Use symbolic metaphors related to "${themes.split(",")[0]}" (e.g., spheres for global, lines for connection, organic blobs for creativity).
+
+Strict Constraints:
+- NO TEXT.
+- NO LOGOS.
+- NO REALISTIC PHOTO ELEMENTS.
+- NO CLUTTER.
+- Figures must be faceless and stylized.
+
+The image should look like a high-end commission for a top-tier design magazine.`;
+
+		console.log(`[Thumbnail] Sending Gemini API request for ${article.id}...`);
 
 		const response = await fetch(
 			`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
@@ -167,30 +208,75 @@ async function generateGeminiThumbnail(
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			console.error("Gemini API error:", response.status, errorText);
+			console.error(
+				`[Thumbnail] Gemini API error for ${article.id}: Status ${response.status}`,
+				errorText,
+			);
 			return null;
 		}
 
+		console.log(
+			`[Thumbnail] Gemini API response OK for ${article.id}. Parsing...`,
+		);
 		const data = (await response.json()) as any;
 
-		// Check for inline_data (standard for Gemini image responses)
-		// The structure typically involves candidates[0].content.parts[0].inline_data
-		const part = data.candidates?.[0]?.content?.parts?.[0];
-		if (part?.inline_data?.mime_type && part?.inline_data?.data) {
-			const base64Data = part.inline_data.data;
-			const mimeType = part.inline_data.mime_type;
-
-			// Convert base64 to Blob
-			const byteCharacters = atob(base64Data);
-			const byteNumbers = new Array(byteCharacters.length);
-			for (let i = 0; i < byteCharacters.length; i++) {
-				byteNumbers[i] = byteCharacters.charCodeAt(i);
-			}
-			const byteArray = new Uint8Array(byteNumbers);
-			return new Blob([byteArray], { type: mimeType });
+		// Validate response structure
+		if (!data.candidates || data.candidates.length === 0) {
+			console.error(
+				`[Thumbnail] No candidates in response for ${article.id}`,
+				JSON.stringify(data).slice(0, 500),
+			);
+			return null;
 		}
 
-		console.error("Unexpected Gemini response structure");
+		// Check for inline_data (standard for Gemini image responses)
+		// The structure: candidates[0].content.parts[*].inline_data
+		// API might return camelCase (inlineData) or snake_case (inline_data)
+		const parts = data.candidates[0]?.content?.parts || [];
+
+		console.log(
+			`[Thumbnail] Found ${parts.length} parts in response for ${article.id}`,
+		);
+
+		for (const part of parts) {
+			const inlineData = part.inline_data || part.inlineData;
+			if (inlineData) {
+				const base64Data = inlineData.data;
+				const mimeType = inlineData.mime_type || inlineData.mimeType;
+
+				if (base64Data && mimeType) {
+					console.log(
+						`[Thumbnail] Found image data for ${article.id}. MIME: ${mimeType}, Size: ${base64Data.length} chars`,
+					);
+
+					// Convert base64 to Blob more efficiently
+					try {
+						const byteCharacters = atob(base64Data);
+						const byteNumbers = new Uint8Array(byteCharacters.length);
+						for (let i = 0; i < byteCharacters.length; i++) {
+							byteNumbers[i] = byteCharacters.charCodeAt(i);
+						}
+						const blob = new Blob([byteNumbers], { type: mimeType });
+						console.log(
+							`[Thumbnail] Created blob for ${article.id}. Size: ${blob.size} bytes`,
+						);
+						return blob;
+					} catch (decodeError) {
+						console.error(
+							`[Thumbnail] Base64 decode error for ${article.id}:`,
+							decodeError,
+						);
+						return null;
+					}
+				}
+			}
+		}
+
+		console.error(
+			`[Thumbnail] No image data found in response for ${article.id}`,
+			`Response keys: ${Object.keys(data).join(", ")}`,
+			`First candidate keys: ${Object.keys(data.candidates[0] || {}).join(", ")}`,
+		);
 		return null;
 	} catch (error) {
 		console.error("Error in generateGeminiThumbnail:", error);
