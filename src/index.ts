@@ -1,3 +1,4 @@
+import { fromHono } from "chanfana";
 import { Hono } from "hono";
 import type { Env } from "./types";
 import { registerAllProviders } from "./providers";
@@ -36,7 +37,27 @@ app.post("/api/clean", (c) => c.redirect("/api/admin/clean", 307));
 app.post("/api/test-push", (c) => c.redirect("/api/subscriptions/test", 307));
 app.get("/api/debug-subs", (c) => c.redirect("/api/subscriptions/count", 301));
 
+// Add OpenAPI documentation with chanfana
+const openapi = fromHono(app, {
+	docs_url: "/docs",
+	redoc_url: "/redoc",
+	openapi_url: "/openapi.json",
+	schema: {
+		info: {
+			title: "News Data API",
+			version: "3.0.0",
+			description: "Modular news aggregation API with AI-powered article transformation variants",
+		},
+		servers: [
+			{
+				url: "https://news-data.omc345.workers.dev",
+				description: "Production server",
+			},
+		],
+	},
+});
+
 export default {
-	fetch: app.fetch,
+	fetch: openapi.fetch,
 	scheduled: scheduledHandler,
 };
