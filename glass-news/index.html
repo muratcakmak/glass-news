@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
   <!-- Primary Meta Tags -->
-  <title>Glass News - AI-Powered News with Beautiful Glassmorphism UI</title>
-  <meta name="title" content="Glass News - AI-Powered News with Beautiful Glassmorphism UI">
-  <meta name="description" content="Discover curated tech news, world events, and Turkish news translated to English. Powered by AI with a stunning glassmorphism interface. HackerNews, Wikipedia, Reddit & more.">
-  <meta name="keywords" content="glass news, AI news, tech news, world news, turkish news, hackernews, wikipedia, reddit, news aggregator, glassmorphism, PWA">
+  <title>Glass News - Curated News with Beautiful Glassmorphism UI</title>
+  <meta name="title" content="Glass News - Curated News with Beautiful Glassmorphism UI">
+  <meta name="description" content="Discover expertly curated tech news, world events, and Turkish news translated to English. Beautiful glassmorphism interface with news from HackerNews, Wikipedia, Reddit & more.">
+  <meta name="keywords" content="glass news, curated news, tech news, world news, turkish news, hackernews, wikipedia, reddit, news aggregator, glassmorphism, PWA">
   <meta name="author" content="Glass News">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <link rel="canonical" href="https://glass-news.pages.dev/">
@@ -17,36 +17,31 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://glass-news.pages.dev/">
   <meta property="og:site_name" content="Glass News">
-  <meta property="og:title" content="Glass News - AI-Powered News with Beautiful Glassmorphism UI">
-  <meta property="og:description" content="Discover curated tech news, world events, and Turkish news translated to English. Powered by AI with a stunning glassmorphism interface.">
-  <meta property="og:image" content="https://glass-news.pages.dev/icons/icon-512.svg">
-  <meta property="og:image:secure_url" content="https://glass-news.pages.dev/icons/icon-512.svg">
-  <meta property="og:image:type" content="image/png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Glass News - Beautiful AI-powered news aggregation">
+  <meta property="og:title" content="Glass News - Curated News with Beautiful Glassmorphism UI">
+  <meta property="og:description" content="Expertly curated tech news, world events, and Turkish news translated to English. Beautiful glassmorphism interface.">
+  <!-- NOTE: OG images require PNG/JPG files. Create icons/og-image.png (1200x630) for social previews -->
   <meta property="og:locale" content="en_US">
 
   <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:card" content="summary">
   <meta name="twitter:url" content="https://glass-news.pages.dev/">
-  <meta name="twitter:title" content="Glass News - AI-Powered News">
-  <meta name="twitter:description" content="Discover curated tech news, world events, and Turkish news translated to English. Beautiful glassmorphism UI.">
-  <meta name="twitter:image" content="https://glass-news.pages.dev/icons/icon-512.svg">
-  <meta name="twitter:image:alt" content="Glass News - AI-powered news aggregation">
+  <meta name="twitter:title" content="Glass News - Curated News">
+  <meta name="twitter:description" content="Expertly curated tech news, world events, and Turkish news translated to English. Beautiful glassmorphism UI.">
+  <!-- NOTE: Twitter images require PNG/JPG files. Create icons/og-image.png (1200x630) for preview cards -->
   <meta name="twitter:creator" content="@glassnews">
   <meta name="twitter:site" content="@glassnews">
 
   <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0a0a0f">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Glass News">
 
   <!-- Icons -->
-  <link rel="icon" type="image/png" href="icons/favicon.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.svg">
 
   <!-- Preconnect for Performance -->
   <link rel="preconnect" href="https://news-data.omc345.workers.dev">
@@ -55,7 +50,7 @@
   <link rel="dns-prefetch" href="https://images.unsplash.com">
 
   <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Structured Data -->
   <script type="application/ld+json">
@@ -63,18 +58,11 @@
     "@context": "https://schema.org",
     "@type": "WebSite",
     "name": "Glass News",
-    "description": "AI-powered news aggregation with beautiful glassmorphism UI. Curated tech news, world events, and Turkish news translated to English.",
+    "description": "Expertly curated news aggregation with beautiful glassmorphism UI. Tech news, world events, and Turkish news translated to English.",
     "url": "https://glass-news.pages.dev",
-    "image": "https://glass-news.pages.dev/icons/icon-512.svg",
     "publisher": {
       "@type": "Organization",
-      "name": "Glass News",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "https://glass-news.pages.dev/icons/icon-512.png",
-        "width": 512,
-        "height": 512
-      }
+      "name": "Glass News"
     },
     "potentialAction": {
       "@type": "SearchAction",
@@ -107,7 +95,7 @@
   <!-- Navigation -->
   <nav class="navbar">
     <div class="navbar-inner">
-      <a href="/" class="navbar-brand">Glass News <span class="navbar-version app-version" style="font-size: 0.6em; opacity: 0.5; font-weight: 400; margin-left: 4px;">v2.3.0</span></a>
+      <a href="/" class="navbar-brand">Glass News <span class="navbar-version app-version" style="font-size: 0.6em; opacity: 0.5; font-weight: 400; margin-left: 4px;">v2.3.1</span></a>
       <div class="navbar-actions">
         <button class="btn btn-primary btn-sm" id="navInstallBtn" style="display: none; padding: 4px 12px; font-size: 0.8em; border-radius: 20px;">Install App</button>
         <button class="btn btn-icon" id="notificationBtn" aria-label="Notifications">
@@ -150,8 +138,8 @@
             <span class="dot"></span>
             <span class="text-label">Breaking</span>
           </div>
-          <h2 class="featured-card-title">OpenAI Announces GPT-5 with Revolutionary Reasoning Capabilities</h2>
-          <p class="featured-card-excerpt">The latest model demonstrates unprecedented performance in complex problem-solving, mathematical reasoning, and multi-step planning tasks, marking a significant leap in AI capabilities.</p>
+          <h2 class="featured-card-title">Glass News: Your Gateway to Curated Tech Intelligence</h2>
+          <p class="featured-card-excerpt">Discover the most important tech news, world events, and insights from HackerNews, Wikipedia, Reddit, and premium Turkish sources—all expertly curated and beautifully presented.</p>
           <button class="btn btn-primary">Read Full Story</button>
         </div>
       </article>
@@ -262,8 +250,8 @@
   <div id="toast" class="toast"></div>
 
   <!-- Hidden Haptic Trigger for iOS 18+ -->
-  <label id="haptic-trigger" style="position: fixed; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; pointer-events: none;" aria-hidden="true">
-    <input type="checkbox" switch id="haptic-checkbox">
+  <label id="haptic-trigger" style="position: fixed; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; pointer-events: none;" inert>
+    <input type="checkbox" switch id="haptic-checkbox" tabindex="-1">
   </label>
 
   <!-- Application Logic -->

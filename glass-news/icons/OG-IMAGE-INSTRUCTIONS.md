@@ -18,8 +18,8 @@
 
 2. **Text**
    - Large "Glass News" logo/wordmark
-   - Tagline: "AI-Powered News · Beautiful UI"
-   - Use Outfit or Inter font family
+   - Tagline: "Curated News · Beautiful UI"
+   - Use Instrument Serif or Plus Jakarta Sans font family
 
 3. **Decorative Elements**
    - Floating glass panels with blur

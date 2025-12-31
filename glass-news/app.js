@@ -8,7 +8,7 @@
 // =========================================
 
 const API_URL = "https://news-data.omc345.workers.dev";
-const APP_VERSION = "2.3.0";
+const APP_VERSION = "2.3.1";
 const VAPID_PUBLIC_KEY =
 	"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM";
 ("BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLcLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM");
@@ -407,13 +407,7 @@ const SEO = {
 			},
 			"publisher": {
 				"@type": "Organization",
-				"name": "Glass News",
-				"logo": {
-					"@type": "ImageObject",
-					"url": `${window.location.origin}/icons/icon-512.png`,
-					"width": 512,
-					"height": 512
-				}
+				"name": "Glass News"
 			},
 			"description": article.excerpt,
 			"articleBody": article.fullContent,
@@ -430,14 +424,14 @@ const SEO = {
 	},
 
 	reset() {
-		document.title = "Glass News";
+		document.title = "Glass News - Curated News";
 		this.setMeta(
 			"description",
-			"Glass News - Your Glass-powered news application with real-time updates",
+			"Glass News - Expertly curated news aggregation with beautiful glassmorphism UI",
 		);
 		this.setMeta("og:title", "Glass News");
-		this.setMeta("og:description", "Your Glass-powered news application");
-		this.setMeta("og:image", `${window.location.origin}/icons/icon-512.png`);
+		this.setMeta("og:description", "Expertly curated news aggregation with beautiful glassmorphism UI");
+		this.setMeta("og:type", "website");
 		this.removeSchema();
 	},
 
@@ -1526,7 +1520,7 @@ function initTestNotifications() {
 			try {
 				new Notification("Glass News Test", {
 					body: "Test notifications enabled. You will receive one every 5 minutes.",
-					icon: "assets/icon-192.png",
+					icon: "icons/icon-192.svg",
 				});
 			} catch (e) {
 				console.error("Error showing initial notification:", e);
@@ -1537,7 +1531,7 @@ function initTestNotifications() {
 					"Breaking: New Glass Technology Revealed",
 					"Market Update: Tech Stocks Soar",
 					"Review: The New Vision Pro",
-					"Analysis: AI in the Workplace",
+					"Analysis: Tech Trends and Insights",
 					"Culture: The Rise of Digital Art",
 				];
 				const randomMsg = messages[Math.floor(Math.random() * messages.length)];
@@ -1546,7 +1540,7 @@ function initTestNotifications() {
 					console.log("Sending test notification:", randomMsg);
 					new Notification("Glass News Alert", {
 						body: randomMsg,
-						icon: "assets/icon-192.png",
+						icon: "icons/icon-192.svg",
 						tag: "news-test-" + Date.now(), // Ensure it pops up as new
 					});
 				} catch (e) {
