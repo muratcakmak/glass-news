@@ -24,6 +24,7 @@ export interface Env {
 	SCRAPEDO_API_KEY?: string;
 	SERPER_API_KEY?: string;
 	GEMINI_API_KEY?: string;
+	ASSETS: Fetcher;
 }
 
 export interface CrawlResult {

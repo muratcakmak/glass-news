@@ -1066,27 +1066,6 @@ a {
 		background: rgba(255, 255, 255, 0.9);
 		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
 	}
-
-	.article-modal-close {
-		background: rgba(255, 255, 255, 0.4);
-		color: black;
-		border-color: rgba(0, 0, 0, 0.08);
-	}
-
-	.article-modal-meta {
-		background: rgba(0, 0, 0, 0.04);
-		color: var(--text-secondary);
-	}
-
-	.article-modal-text {
-		color: rgba(0, 0, 0, 0.85);
-	}
-
-	.btn-share {
-		background: rgba(0, 0, 0, 0.05);
-		color: var(--text-primary);
-		border-color: rgba(0, 0, 0, 0.1);
-	}
 }
 
 /* =========================================
@@ -1122,16 +1101,23 @@ a {
 	position: absolute;
 	inset: 0;
 	background: var(--modal-overlay);
-	backdrop-filter: blur(0px) saturate(100%);
-	-webkit-backdrop-filter: blur(0px) saturate(100%);
 	opacity: 0;
-	transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+	transition: opacity 0.4s var(--ease-out);
 }
 
 .article-modal.show .article-modal-overlay {
-	backdrop-filter: blur(40px) saturate(180%);
-	-webkit-backdrop-filter: blur(40px) saturate(180%);
 	opacity: 1;
+}
+
+/* Blur effect on page content when modal is open */
+.page-blur {
+	filter: blur(20px);
+	transition: filter 0s;
+}
+
+.page-blur-animate {
+	filter: blur(20px);
+	transition: filter 0.3s var(--ease-out);
 }
 
 .article-modal-content {
@@ -1258,8 +1244,8 @@ a {
 	background: var(--accent-subtle);
 	backdrop-filter: blur(8px);
 	-webkit-backdrop-filter: blur(8px);
-	border: 1px solid var(--accent);
-	color: var(--accent);
+	border: 1px solid rgba(10, 132, 255, 0.5);
+	color: white;
 	font-size: 12px;
 	font-weight: 700;
 	text-transform: uppercase;
@@ -1411,5 +1397,38 @@ a {
 
 	.article-modal-title {
 		font-size: 2rem;
+	}
+}
+
+/* =========================================
+   Light Mode Overrides (Must be last)
+   ========================================= */
+
+@media (prefers-color-scheme: light) {
+	.article-modal-close {
+		background: rgba(255, 255, 255, 0.4);
+		color: black;
+		border-color: rgba(0, 0, 0, 0.08);
+	}
+
+	.btn-share {
+		background: rgba(0, 0, 0, 0.05);
+		color: var(--text-primary);
+		border-color: rgba(0, 0, 0, 0.1);
+	}
+
+	.article-modal-image-container::after {
+		background: linear-gradient(
+			to bottom,
+			transparent 0%,
+			transparent 50%,
+			rgba(255, 255, 255, 0.85) 100%
+		);
+	}
+
+	.article-modal-category {
+		color: var(--accent);
+		border-color: var(--accent);
+		background: var(--accent-subtle);
 	}
 }

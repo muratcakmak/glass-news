@@ -1,7 +1,7 @@
-import { Env, NewsArticle } from "./types";
+import type { Env, NewsArticle } from "./types";
 import { crawlT24, fetchT24ArticleDetail } from "./crawlers/t24";
 import { crawlEksisozluk, fetchEksisozlukDetail } from "./crawlers/eksisozluk";
-import { crawlHackerNews } from "./crawlers/hackernews";
+import { crawlHackerNews, fetchHNArticleContent } from "./crawlers/hackernews";
 import { crawlWikipedia } from "./crawlers/wikipedia";
 import { crawlReddit } from "./crawlers/reddit";
 import { transformContent } from "./transformers/content";
@@ -277,89 +277,176 @@ async function handleManualCrawl(
 	corsHeaders: Record<string, string>,
 ): Promise<Response> {
 	try {
-		const body = (await request.json()) as { sources?: string[] };
-		const sources = body.sources || ["all"];
+		const body = (await request.json()) as {
+			sources?: string[];
+			count?: number;
+			sync?: boolean;
+		};
+		const sources = body.sources || ["eksisozluk"];
+		const count = body.count || 5;
+		const sync = body.sync ?? true; // Default to sync processing
 
 		const allArticles: NewsArticle[] = [];
 
-		// ONLY EKSISOZLUK FOR NOW
-		console.log("Crawling Eksisozluk...");
-		const eksiArticles = await crawlEksisozluk(env);
+		// Crawl based on sources array
+		if (sources.includes("eksisozluk") || sources.includes("all")) {
+			console.log("Crawling Eksisozluk...");
+			const eksiArticles = await crawlEksisozluk(env);
+			const limitedEksi = eksiArticles.slice(0, count);
 
-		// Fetch content using SERPER for each article
-		console.log(
-			`Fetching content for ${eksiArticles.length} eksisozluk articles...`,
-		);
-		for (const article of eksiArticles) {
-			if (!article.originalContent) {
-				console.log(`[Eksi] Fetching: ${article.originalUrl}`);
-				article.originalContent = await fetchEksisozlukDetail(
-					article.originalUrl,
-					env,
-					article.originalTitle,
-				);
-				// If content fetching fails, use title as fallback
+			// Fetch content using SERPER for each article
+			console.log(
+				`Fetching content for ${limitedEksi.length} eksisozluk articles...`,
+			);
+			for (const article of limitedEksi) {
 				if (!article.originalContent) {
-					article.originalContent = article.originalTitle;
-					console.warn(
-						`[Eksi] Using title as content fallback for ${article.id}`,
+					console.log(`[Eksi] Fetching: ${article.originalUrl}`);
+					article.originalContent = await fetchEksisozlukDetail(
+						article.originalUrl,
+						env,
+						article.originalTitle,
 					);
+					if (!article.originalContent) {
+						article.originalContent = article.originalTitle;
+						console.warn(
+							`[Eksi] Using title as content fallback for ${article.id}`,
+						);
+					}
 				}
 			}
+			allArticles.push(...limitedEksi);
+			console.log(`Crawled ${limitedEksi.length} eksisozluk articles`);
 		}
 
-		allArticles.push(...eksiArticles);
-		console.log(`Crawled ${eksiArticles.length} eksisozluk articles`);
+		if (sources.includes("hackernews") || sources.includes("all")) {
+			console.log("Crawling HackerNews...");
+			const hnArticles = await crawlHackerNews();
+			const limitedHN = hnArticles.slice(0, count);
 
-		// TODO: Re-enable other sources later
-		// if (sources.includes("hackernews")) {
-		// 	const hnArticles = await crawlHackerNews();
-		// 	allArticles.push(...hnArticles);
-		// }
-		// if (sources.includes("wikipedia")) {
-		// 	const wikiArticles = await crawlWikipedia();
-		// 	allArticles.push(...wikiArticles);
-		// }
-		// if (sources.includes("reddit")) {
-		// 	const redditArticles = await crawlReddit(env);
-		// 	allArticles.push(...redditArticles);
-		// }
-
-		// Process articles in background to avoid timeout
-		ctx.waitUntil(
-			(async () => {
-				try {
-					// Process articles one at a time to avoid timeout
-					let processedCount = 0;
-					for (const article of allArticles) {
-						try {
-							// Transform and save immediately
-							const transformed = await transformContent(article, env);
-							await saveArticleToR2(transformed, env);
-							processedCount++;
-						} catch (error) {
-							console.error(`Error processing article ${article.id}:`, error);
-							// Save without transformation on error
-							await saveArticleToR2(article, env);
-							processedCount++;
-						}
-					}
-					console.log(`Successfully processed ${processedCount} articles`);
-				} catch (error) {
-					console.error("Error processing articles in background:", error);
+			// Fetch comments for each HN article
+			console.log(`Fetching comments for ${limitedHN.length} HN articles...`);
+			for (const article of limitedHN) {
+				// Use the HN discussion URL to get comments
+				const hnDiscussionUrl = `https://news.ycombinator.com/item?id=${article.id.replace("hn-", "")}`;
+				console.log(`[HN] Fetching comments: ${hnDiscussionUrl}`);
+				const comments = await fetchHNArticleContent(hnDiscussionUrl);
+				if (comments) {
+					article.originalContent = `${article.originalTitle}\n\n${comments}`;
+					console.log(
+						`[HN] Got ${comments.length} chars of comments for ${article.id}`,
+					);
+				} else {
+					console.warn(`[HN] No comments found for ${article.id}, using title`);
 				}
-			})(),
-		);
+			}
+			allArticles.push(...limitedHN);
+			console.log(`Crawled ${limitedHN.length} hackernews articles`);
+		}
 
-		// Return immediately with crawled count
-		return new Response(
-			JSON.stringify({
-				success: true,
-				count: allArticles.length,
-				status: "processing",
-			}),
-			{ headers: { ...corsHeaders, "Content-Type": "application/json" } },
-		);
+		if (sources.includes("wikipedia") || sources.includes("all")) {
+			console.log("Crawling Wikipedia...");
+			const wikiArticles = await crawlWikipedia();
+			allArticles.push(...wikiArticles.slice(0, count));
+			console.log(
+				`Crawled ${Math.min(wikiArticles.length, count)} wikipedia articles`,
+			);
+		}
+
+		if (sources.includes("reddit") || sources.includes("all")) {
+			console.log("Crawling Reddit...");
+			const redditArticles = await crawlReddit(env);
+			allArticles.push(...redditArticles.slice(0, count));
+			console.log(
+				`Crawled ${Math.min(redditArticles.length, count)} reddit articles`,
+			);
+		}
+
+		if (sources.includes("t24") || sources.includes("all")) {
+			console.log("Crawling T24...");
+			const t24Articles = await crawlT24(env);
+			const limitedT24 = t24Articles.slice(0, count);
+
+			// Optionally fetch full content for t24 articles
+			for (const article of limitedT24) {
+				if (article.originalContent && article.originalContent.length < 100) {
+					console.log(`[T24] Fetching full content: ${article.originalUrl}`);
+					const fullContent = await fetchT24ArticleDetail(
+						article.originalUrl,
+						env,
+					);
+					if (fullContent) {
+						article.originalContent = fullContent;
+					}
+				}
+			}
+			allArticles.push(...limitedT24);
+			console.log(`Crawled ${limitedT24.length} t24 articles`);
+		}
+
+		// Limit total articles
+		const articlesToProcess = allArticles.slice(0, count);
+
+		if (sync) {
+			// Process synchronously - wait for AI transformation and image generation
+			const processedArticles: NewsArticle[] = [];
+			for (const article of articlesToProcess) {
+				try {
+					console.log(`[Sync] Transforming article ${article.id}...`);
+					const transformed = await transformContent(article, env);
+					console.log(`[Sync] Saving article ${article.id}...`);
+					const saved = await saveArticleToR2(transformed, env);
+					processedArticles.push(saved);
+					console.log(`[Sync] ✓ Completed ${article.id}`);
+				} catch (error) {
+					console.error(`Error processing article ${article.id}:`, error);
+					// Save without transformation on error
+					await saveArticleToR2(article, env);
+					processedArticles.push(article);
+				}
+			}
+
+			return new Response(
+				JSON.stringify({
+					success: true,
+					count: processedArticles.length,
+					status: "completed",
+					articles: processedArticles,
+				}),
+				{ headers: { ...corsHeaders, "Content-Type": "application/json" } },
+			);
+		} else {
+			// Process in background (original behavior)
+			ctx.waitUntil(
+				(async () => {
+					try {
+						let processedCount = 0;
+						for (const article of articlesToProcess) {
+							try {
+								const transformed = await transformContent(article, env);
+								await saveArticleToR2(transformed, env);
+								processedCount++;
+							} catch (error) {
+								console.error(`Error processing article ${article.id}:`, error);
+								await saveArticleToR2(article, env);
+								processedCount++;
+							}
+						}
+						console.log(`Successfully processed ${processedCount} articles`);
+					} catch (error) {
+						console.error("Error processing articles in background:", error);
+					}
+				})(),
+			);
+
+			return new Response(
+				JSON.stringify({
+					success: true,
+					count: articlesToProcess.length,
+					status: "processing",
+				}),
+				{ headers: { ...corsHeaders, "Content-Type": "application/json" } },
+			);
+		}
 	} catch (error) {
 		console.error("Error in manual crawl:", error);
 		return new Response(JSON.stringify({ error: "Internal server error" }), {

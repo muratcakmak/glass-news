@@ -17,15 +17,16 @@ id = "a1c6716fe6f54f6eae4783d0ed8def14"
 # SF Time: 9 AM - 6 PM PST (17:00 - 02:00 UTC next day) for English sources
 # SF Time: 10 PM - 7 AM PST (06:00 - 15:00 UTC) for Turkish sources
 
-[triggers]
-crons = [
-  # English sources: Every hour from 9 AM - 6 PM PST (5 PM - 2 AM UTC)
-  "0 17-23 * * *",  # 5 PM - 11 PM UTC (9 AM - 3 PM PST)
-  "0 0-2 * * *",    # 12 AM - 2 AM UTC (4 PM - 6 PM PST)
-
-  # Turkish sources: Every hour from 10 PM - 7 AM PST (6 AM - 3 PM UTC)
-  "0 6-15 * * *",   # 6 AM - 3 PM UTC (10 PM PST - 7 AM PST next day)
-]
+# Cron triggers - DISABLED for manual testing
+# [triggers]
+# crons = [
+#   # English sources: Every hour from 9 AM - 6 PM PST (5 PM - 2 AM UTC)
+#   "0 17-23 * * *",  # 5 PM - 11 PM UTC (9 AM - 3 PM PST)
+#   "0 0-2 * * *",    # 12 AM - 2 AM UTC (4 PM - 6 PM PST)
+#
+#   # Turkish sources: Every hour from 10 PM - 7 AM PST (6 AM - 3 PM UTC)
+#   "0 6-15 * * *",   # 6 AM - 3 PM UTC (10 PM PST - 7 AM PST next day)
+# ]
 
 [vars]
 # Environment variables (non-sensitive)
@@ -39,3 +40,7 @@ RESEARCH_MODEL = "x-ai/grok-4.1-fast"
 # REDDIT_CLIENT_SECRET
 # SCRAPEDO_API_KEY (if needed for scraping)
 # SERPER_API_KEY (if needed for search)
+
+[assets]
+directory = "glass-news"
+binding = "ASSETS"

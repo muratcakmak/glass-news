@@ -202,7 +202,9 @@ const ROUTER = {
 		SEO.update(article);
 	},
 
+	// If on an article directly or refreshed, pushedCount is 0, so we reset to home
 	back() {
+		// Log for debugging if we could see logs: console.log('ROUTER: back()', this.pushedCount);
 		if (this.pushedCount > 0) {
 			this.pushedCount--;
 			history.back();
@@ -212,7 +214,9 @@ const ROUTER = {
 	},
 
 	reset() {
-		history.replaceState({}, "", "/");
+		// Use pathname instead of "/" to keep file:// support and avoid SecurityError
+		const url = window.location.pathname;
+		history.replaceState({}, "", url);
 		this.pushedCount = 0;
 		SEO.reset();
 	},
@@ -559,6 +563,12 @@ function renderNews() {
  * Show article in modal
  */
 function showArticleModal(article, pushToHistory = true) {
+	// Apply blur immediately to the page content and navbar
+	const page = document.querySelector(".page");
+	const navbar = document.querySelector(".navbar");
+	if (page) page.classList.add("page-blur");
+	if (navbar) navbar.classList.add("page-blur");
+
 	// Update Router & SEO if needed
 	if (pushToHistory) {
 		ROUTER.push(article);
@@ -636,6 +646,11 @@ function showArticleModal(article, pushToHistory = true) {
  * Hide article modal
  */
 function hideArticleModal(updateHistory = true) {
+	// If the modal is already hidden, do nothing
+	if (elements.articleModal && elements.articleModal.style.display === "none") {
+		return;
+	}
+
 	if (updateHistory) {
 		ROUTER.back();
 	}
@@ -644,6 +659,12 @@ function hideArticleModal(updateHistory = true) {
 	setTimeout(() => {
 		elements.articleModal.style.display = "none";
 	}, 300);
+
+	// Remove blur from page content and navbar
+	const page = document.querySelector(".page");
+	const navbar = document.querySelector(".navbar");
+	if (page) page.classList.remove("page-blur");
+	if (navbar) navbar.classList.remove("page-blur");
 
 	// Restore body scroll
 	document.body.style.overflow = "";
@@ -654,12 +675,24 @@ function hideArticleModal(updateHistory = true) {
  */
 function initModal() {
 	// Close button
-	elements.modalClose?.addEventListener("click", () => hideArticleModal());
+	const closeBtn = document.getElementById("modalClose");
+	if (closeBtn) {
+		closeBtn.addEventListener("click", (e) => {
+			if (e) e.preventDefault();
+			hideArticleModal(true);
+		});
+	}
 
 	// Overlay click
-	elements.articleModal
-		?.querySelector(".article-modal-overlay")
-		?.addEventListener("click", () => hideArticleModal());
+	const overlay = elements.articleModal?.querySelector(
+		".article-modal-overlay",
+	);
+	if (overlay) {
+		overlay.addEventListener("click", (e) => {
+			if (e) e.preventDefault();
+			hideArticleModal(true);
+		});
+	}
 
 	// Escape key
 	document.addEventListener("keydown", (e) => {
@@ -1060,6 +1093,9 @@ async function init() {
 	console.log("PWA mode:", isPWA());
 	console.log("iOS:", isIOS());
 	console.log("Notifications supported:", notificationsSupported());
+
+	// Initialize test notifications if param is present
+	initTestNotifications();
 }
 
 /**
@@ -1083,6 +1119,62 @@ function updateFeaturedArticle() {
 			showArticleModal(featured);
 		};
 	}
+}
+/**
+ * Initialize test notifications for development
+ */
+function initTestNotifications() {
+	const urlParams = new URLSearchParams(window.location.search);
+	if (urlParams.get("notifications") !== "test") return;
+
+	console.log("Initializing test notifications...");
+
+	if (!("Notification" in window)) {
+		console.log("This browser does not support desktop notification");
+		return;
+	}
+
+	Notification.requestPermission().then((permission) => {
+		if (permission === "granted") {
+			console.log("Notification permission granted. Starting 5-minute timer.");
+			showToast("Test notifications enabled (every 5m)", "success");
+
+			// Initial test notification
+			try {
+				new Notification("Glass News Test", {
+					body: "Test notifications enabled. You will receive one every 5 minutes.",
+					icon: "assets/icon-192.png",
+				});
+			} catch (e) {
+				console.error("Error showing initial notification:", e);
+			}
+
+			setInterval(() => {
+				const messages = [
+					"Breaking: New Glass Technology Revealed",
+					"Market Update: Tech Stocks Soar",
+					"Review: The New Vision Pro",
+					"Analysis: AI in the Workplace",
+					"Culture: The Rise of Digital Art",
+				];
+				const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+
+				try {
+					console.log("Sending test notification:", randomMsg);
+					new Notification("Glass News Alert", {
+						body: randomMsg,
+						icon: "assets/icon-192.png",
+						tag: "news-test-" + Date.now(), // Ensure it pops up as new
+					});
+				} catch (e) {
+					console.error("Error showing interval notification:", e);
+				}
+			}, 300000); // 5 minutes
+		} else {
+			console.log("Notification permission denied");
+			showToast("Notification permission denied", "error");
+		}
+	});
 }
 
 // Start the app when DOM is ready
