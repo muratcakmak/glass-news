@@ -11,9 +11,11 @@ const API_URL = "https://news-data.omc345.workers.dev";
 const APP_VERSION = "2.2.8-light-theme-fix";
 const VAPID_PUBLIC_KEY =
 	"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM";
-("BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLcLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM");
 let NEWS_DATA = [];
 let VERSION_INFO = { version: APP_VERSION, buildTime: null };
+const FALLBACK_IMAGE = "icons/icon-512.svg";
+const FALLBACK_TITLE = "Untitled story";
+const FALLBACK_EXCERPT = "Read the full story for details.";
 
 // =========================================
 // Native Feel Optimizations (iOS)
@@ -99,7 +101,7 @@ async function fetchArticles(source = null, limit = 50) {
 			? `${API_URL}/api/articles?source=${source}&limit=${limit}`
 			: `${API_URL}/api/articles?limit=${limit}`;
 
-		const response = await fetch(url);
+		const response = await fetchWithTimeout(url, 12000);
 
 		if (!response.ok) {
 			throw new Error(`API error: ${response.status}`);
@@ -112,6 +114,44 @@ async function fetchArticles(source = null, limit = 50) {
 		showToast("Failed to load articles", "error");
 		return [];
 	}
+}
+
+function fetchWithTimeout(url, timeoutMs = 10000) {
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+	return fetch(url, { signal: controller.signal }).finally(() => {
+		clearTimeout(timeoutId);
+	});
+}
+
+function normalizeText(value, fallback = "") {
+	if (typeof value === "string") {
+		const trimmed = value.trim();
+		if (trimmed) return trimmed;
+	}
+	return fallback;
+}
+
+function ensureArray(value) {
+	return Array.isArray(value) ? value : [];
+}
+
+function getExcerpt(content) {
+	if (!content) return FALLBACK_EXCERPT;
+	return content.substring(0, 200) + "...";
+}
+
+function setImageWithFallback(imgEl, src, alt) {
+	if (!imgEl) return;
+	imgEl.alt = alt || "";
+	imgEl.loading = imgEl.loading || "lazy";
+	imgEl.decoding = "async";
+	imgEl.onerror = () => {
+		imgEl.src = FALLBACK_IMAGE;
+		imgEl.onerror = null;
+	};
+	imgEl.src = src || FALLBACK_IMAGE;
 }
 
 /**
@@ -150,23 +190,32 @@ function transformArticle(apiArticle) {
 		return map[source] || source;
 	};
 
+	const originalContent = normalizeText(apiArticle.originalContent);
+	const transformedContent = normalizeText(apiArticle.transformedContent);
+	const fullContent = transformedContent || originalContent || "";
+	const title = normalizeText(
+		apiArticle.transformedTitle || apiArticle.originalTitle,
+		FALLBACK_TITLE,
+	);
+
+	let imageUrl = FALLBACK_IMAGE;
+	if (typeof apiArticle.thumbnailUrl === "string") {
+		imageUrl = apiArticle.thumbnailUrl.startsWith("http")
+			? apiArticle.thumbnailUrl
+			: `${API_URL}${apiArticle.thumbnailUrl}`;
+	}
+
 	return {
 		id: apiArticle.id,
 		category: getCategoryName(apiArticle.source),
-		title: apiArticle.transformedTitle || apiArticle.originalTitle,
-		excerpt: apiArticle.transformedContent
-			? apiArticle.transformedContent.substring(0, 200) + "..."
-			: apiArticle.originalContent.substring(0, 200) + "...",
-		fullContent: apiArticle.transformedContent || apiArticle.originalContent,
-		image: apiArticle.thumbnailUrl?.startsWith("http")
-			? apiArticle.thumbnailUrl
-			: `${API_URL}${apiArticle.thumbnailUrl}`,
+		title: title,
+		excerpt: getExcerpt(fullContent),
+		fullContent: fullContent,
+		image: imageUrl,
 		author: "Curated",
 		date: getTimeAgo(apiArticle.crawledAt),
-		readTime: getReadTime(
-			apiArticle.transformedContent || apiArticle.originalContent,
-		),
-		tags: apiArticle.tags || [],
+		readTime: getReadTime(fullContent),
+		tags: ensureArray(apiArticle.tags),
 		originalUrl: apiArticle.originalUrl,
 		source: apiArticle.source,
 	};
@@ -486,6 +535,7 @@ const SEO = {
  * Show toast notification
  */
 function showToast(message, type = "default") {
+	if (!elements.toast) return;
 	elements.toast.textContent = message;
 	elements.toast.className = `toast ${type} show`;
 
@@ -520,21 +570,51 @@ function createNewsCard(article) {
 	card.className = "news-card";
 	card.dataset.articleId = article.id;
 
-	card.innerHTML = `
-    <div class="news-card-image">
-      <img src="${article.image}" alt="${article.title}" loading="lazy">
-    </div>
-    <div class="news-card-content">
-      <span class="news-card-category">${article.category}</span>
-      <h3 class="news-card-title">${article.title}</h3>
-      <p class="news-card-excerpt">${article.excerpt}</p>
-      <div class="news-card-meta">
-        <span>${article.author}</span>
-        <span>${article.date}</span>
-        <span>${article.readTime} read</span>
-      </div>
-    </div>
-  `;
+	const imageWrap = document.createElement("div");
+	imageWrap.className = "news-card-image";
+
+	const img = document.createElement("img");
+	setImageWithFallback(img, article.image, article.title);
+	imageWrap.appendChild(img);
+
+	const content = document.createElement("div");
+	content.className = "news-card-content";
+
+	const category = document.createElement("span");
+	category.className = "news-card-category";
+	category.textContent = article.category;
+
+	const title = document.createElement("h3");
+	title.className = "news-card-title";
+	title.textContent = article.title || FALLBACK_TITLE;
+
+	const excerpt = document.createElement("p");
+	excerpt.className = "news-card-excerpt";
+	excerpt.textContent = article.excerpt || FALLBACK_EXCERPT;
+
+	const meta = document.createElement("div");
+	meta.className = "news-card-meta";
+
+	const author = document.createElement("span");
+	author.textContent = article.author || "Curated";
+
+	const date = document.createElement("span");
+	date.textContent = article.date || "";
+
+	const readTime = document.createElement("span");
+	readTime.textContent = article.readTime ? `${article.readTime} read` : "Quick read";
+
+	meta.appendChild(author);
+	meta.appendChild(date);
+	meta.appendChild(readTime);
+
+	content.appendChild(category);
+	content.appendChild(title);
+	content.appendChild(excerpt);
+	content.appendChild(meta);
+
+	card.appendChild(imageWrap);
+	card.appendChild(content);
 
 	card.addEventListener("click", () => {
 		showArticleModal(article);
@@ -548,6 +628,7 @@ function createNewsCard(article) {
  */
 async function loadNews(source = null) {
 	try {
+		if (!elements.newsGrid) return;
 		// Show loading state
 		elements.newsGrid.innerHTML =
 			'<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-secondary);">Loading articles...</div>';
@@ -594,8 +675,10 @@ async function loadNews(source = null) {
 		}
 	} catch (error) {
 		console.error("Error loading news:", error);
-		elements.newsGrid.innerHTML =
-			'<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-error);">Failed to load articles. Please try again.</div>';
+		if (elements.newsGrid) {
+			elements.newsGrid.innerHTML =
+				'<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-error);">Failed to load articles. Please try again.</div>';
+		}
 	}
 }
 
@@ -611,10 +694,11 @@ function applySearchFilter() {
 
 	const query = currentSearch.toLowerCase();
 	NEWS_DATA = NEWS_DATA.filter((article) => {
-		const inTitle = article.title.toLowerCase().includes(query);
-		const inExcerpt = article.excerpt.toLowerCase().includes(query);
-		const inCategory = article.category.toLowerCase().includes(query);
-		const inTags = article.tags.some((t) => t.toLowerCase().includes(query));
+		const inTitle = (article.title || "").toLowerCase().includes(query);
+		const inExcerpt = (article.excerpt || "").toLowerCase().includes(query);
+		const inCategory = (article.category || "").toLowerCase().includes(query);
+		const tags = ensureArray(article.tags);
+		const inTags = tags.some((t) => (t || "").toLowerCase().includes(query));
 
 		return inTitle || inExcerpt || inCategory || inTags;
 	});
@@ -697,7 +781,7 @@ function initSearch() {
 		Haptics.trigger(10);
 		elements.searchInput.value = "";
 		currentSearch = "";
-		elements.searchClear.style.display = "none";
+		if (elements.searchClear) elements.searchClear.style.display = "none";
 
 		// Reload/Reset local filtering
 		loadNews(currentCategory);
@@ -708,6 +792,7 @@ function initSearch() {
  * Render news articles to the grid
  */
 function renderNews() {
+	if (!elements.newsGrid) return;
 	elements.newsGrid.innerHTML = "";
 
 	if (NEWS_DATA.length === 0) {
@@ -731,6 +816,7 @@ function renderNews() {
  * Show article in modal
  */
 function showArticleModal(article, pushToHistory = true) {
+	if (!elements.articleModal || !elements.modalContent) return;
 	// Optimized for Safari: We rely on backdrop-filter on the overlay now
 	// rather than blurring the whole page content.
 
@@ -740,19 +826,23 @@ function showArticleModal(article, pushToHistory = true) {
 	}
 
 	// Update modal content
-	elements.modalCategory.textContent = article.category;
-	elements.modalTitle.textContent = article.title;
-	elements.modalAuthor.textContent = article.author;
-	elements.modalDate.textContent = article.date;
-	elements.modalReadTime.textContent = article.readTime + " read";
-	elements.modalImage.src = article.image;
-	elements.modalImage.alt = article.title;
-	elements.modalSourceLink.href = article.originalUrl;
+	if (elements.modalCategory) elements.modalCategory.textContent = article.category;
+	if (elements.modalTitle) elements.modalTitle.textContent = article.title;
+	if (elements.modalAuthor) elements.modalAuthor.textContent = article.author;
+	if (elements.modalDate) elements.modalDate.textContent = article.date;
+	if (elements.modalReadTime) {
+		elements.modalReadTime.textContent = article.readTime + " read";
+	}
+	setImageWithFallback(elements.modalImage, article.image, article.title);
+	if (elements.modalSourceLink) {
+		elements.modalSourceLink.href = article.originalUrl || "#";
+	}
 
 	// Update tags
-	elements.modalTags.innerHTML = "";
-	if (article.tags && article.tags.length > 0) {
-		article.tags.forEach((tag) => {
+	if (elements.modalTags) elements.modalTags.innerHTML = "";
+	const tagList = ensureArray(article.tags);
+	if (elements.modalTags && tagList.length > 0) {
+		tagList.forEach((tag) => {
 			const tagEl = document.createElement("span");
 			tagEl.className = "article-modal-tag clickable";
 			tagEl.textContent = tag;
@@ -775,13 +865,23 @@ function showArticleModal(article, pushToHistory = true) {
 	}
 
 	// Update content with proper paragraph formatting (Force <br> for robust mobile rendering)
-	const paragraphs = article.fullContent.split("\n\n").filter((p) => p.trim());
-	elements.modalContent.innerHTML = paragraphs
-		.map(
-			(p) =>
-				`<p style="white-space: pre-wrap; margin-bottom: 1.5em;">${p.trim().replace(/\n/g, "<br>")}</p>`,
-		)
-		.join("");
+	const paragraphs = (article.fullContent || "")
+		.split("\n\n")
+		.filter((p) => p.trim());
+	elements.modalContent.innerHTML = "";
+	if (paragraphs.length === 0) {
+		const fallback = document.createElement("p");
+		fallback.textContent = FALLBACK_EXCERPT;
+		elements.modalContent.appendChild(fallback);
+	} else {
+		paragraphs.forEach((para) => {
+			const p = document.createElement("p");
+			p.style.whiteSpace = "pre-wrap";
+			p.style.marginBottom = "1.5em";
+			p.textContent = para.trim();
+			elements.modalContent.appendChild(p);
+		});
+	}
 
 	// Show modal
 	elements.articleModal.style.display = "flex";
@@ -839,6 +939,7 @@ function hideArticleModal(updateHistory = true) {
 		ROUTER.back();
 	}
 
+	if (!elements.articleModal) return;
 	elements.articleModal.classList.remove("show");
 	setTimeout(() => {
 		elements.articleModal.style.display = "none";
@@ -888,6 +989,7 @@ function initModal() {
 	document.addEventListener("keydown", (e) => {
 		if (
 			e.key === "Escape" &&
+			elements.articleModal &&
 			elements.articleModal.classList.contains("show")
 		) {
 			hideArticleModal();
@@ -896,14 +998,14 @@ function initModal() {
 
 	// Share button
 	elements.modalShare?.addEventListener("click", () => {
-		const title = elements.modalTitle.textContent;
+		const title = elements.modalTitle?.textContent || "Glass News";
 		const text = ""; // User requested to share only the link
 
 		// Use canonical app link (Hardcoded production URL)
 		const articleId = elements.modalShare.dataset.articleId;
 		const url = articleId
 			? `https://glass-news.pages.dev/?article=${articleId}`
-			: elements.modalSourceLink.href;
+			: elements.modalSourceLink?.href || window.location.href;
 
 		handleShare(title, text, url);
 	});
@@ -940,8 +1042,27 @@ async function handleShare(title, text, url) {
  */
 async function copyToClipboard(text) {
 	try {
-		await navigator.clipboard.writeText(text);
-		showToast("Link copied to clipboard!", "success");
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			await navigator.clipboard.writeText(text);
+			showToast("Link copied to clipboard!", "success");
+			return;
+		}
+
+		const textarea = document.createElement("textarea");
+		textarea.value = text;
+		textarea.setAttribute("readonly", "");
+		textarea.style.position = "absolute";
+		textarea.style.left = "-9999px";
+		document.body.appendChild(textarea);
+		textarea.select();
+		const ok = document.execCommand("copy");
+		textarea.remove();
+
+		if (ok) {
+			showToast("Link copied to clipboard!", "success");
+		} else {
+			throw new Error("execCommand copy failed");
+		}
 	} catch (err) {
 		console.error("Failed to copy:", err);
 		showToast("Could not copy link", "error");
@@ -953,6 +1074,7 @@ async function copyToClipboard(text) {
 // =========================================
 
 function initCategoryFilters() {
+	if (!elements.categoryPills || elements.categoryPills.length === 0) return;
 	elements.categoryPills.forEach((pill) => {
 		pill.addEventListener("click", () => {
 			// Update active state
@@ -1122,7 +1244,9 @@ function showNotificationBanner() {
 
 	// Delay showing the banner for better UX
 	setTimeout(() => {
-		elements.notificationBanner.style.display = "block";
+		if (elements.notificationBanner) {
+			elements.notificationBanner.style.display = "block";
+		}
 	}, 3000);
 }
 
@@ -1130,7 +1254,9 @@ function showNotificationBanner() {
  * Hide notification permission banner
  */
 function hideNotificationBanner() {
-	elements.notificationBanner.style.display = "none";
+	if (elements.notificationBanner) {
+		elements.notificationBanner.style.display = "none";
+	}
 }
 
 /**
@@ -1179,14 +1305,18 @@ function showInstallBanner() {
 	if (wasInstallBannerDismissed()) return;
 	if (isPWA()) return;
 
-	elements.installBanner.style.display = "block";
+	if (elements.installBanner) {
+		elements.installBanner.style.display = "block";
+	}
 }
 
 /**
  * Hide install banner
  */
 function hideInstallBanner() {
-	elements.installBanner.style.display = "none";
+	if (elements.installBanner) {
+		elements.installBanner.style.display = "none";
+	}
 }
 
 /**
@@ -1491,16 +1621,23 @@ function updateFeaturedArticle() {
 	const featuredCard = document.querySelector(".featured-card");
 
 	if (featuredCard && featured) {
-		featuredCard.querySelector(".featured-card-image img").src = featured.image;
-		featuredCard.querySelector(".featured-card-title").textContent =
-			featured.title;
-		featuredCard.querySelector(".featured-card-excerpt").textContent =
-			featured.excerpt;
-
+		const featuredImage = featuredCard.querySelector(
+			".featured-card-image img",
+		);
+		const featuredTitle = featuredCard.querySelector(".featured-card-title");
+		const featuredExcerpt = featuredCard.querySelector(
+			".featured-card-excerpt",
+		);
 		const button = featuredCard.querySelector(".btn-primary");
-		button.onclick = () => {
-			showArticleModal(featured);
-		};
+
+		setImageWithFallback(featuredImage, featured.image, featured.title);
+		if (featuredTitle) featuredTitle.textContent = featured.title;
+		if (featuredExcerpt) featuredExcerpt.textContent = featured.excerpt;
+		if (button) {
+			button.onclick = () => {
+				showArticleModal(featured);
+			};
+		}
 	}
 }
 /**
