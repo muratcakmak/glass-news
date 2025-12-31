@@ -8,11 +8,12 @@
 // =========================================
 
 const API_URL = "https://news-data.omc345.workers.dev";
-const APP_VERSION = "2.2.5-pwa-install-fix"; // Force cache bust
+const APP_VERSION = "2.2.7";
 const VAPID_PUBLIC_KEY =
 	"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM";
 ("BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLcLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM");
 let NEWS_DATA = [];
+let VERSION_INFO = { version: APP_VERSION, buildTime: null };
 
 // =========================================
 // Native Feel Optimizations (iOS)
@@ -333,7 +334,7 @@ const ROUTER = {
 const SEO = {
 	update(article) {
 		// 1. Update Title
-		document.title = `${article.title} - v2.2.5`;
+		document.title = `${article.title} - v${VERSION_INFO.version}`;
 
 		// 2. Update Meta Tags
 		this.setMeta("description", article.excerpt);
@@ -1321,10 +1322,60 @@ function initThemeListener() {
 }
 
 // =========================================
+// Version Management
+// =========================================
+
+/**
+ * Fetch version info from version.json
+ */
+async function fetchVersionInfo() {
+	try {
+		const response = await fetch('version.json?' + Date.now()); // Cache bust
+		if (response.ok) {
+			VERSION_INFO = await response.json();
+			updateVersionDisplay();
+		}
+	} catch (error) {
+		console.log('Could not load version info:', error);
+	}
+}
+
+/**
+ * Update version display in UI
+ */
+function updateVersionDisplay() {
+	const versionElements = document.querySelectorAll('.app-version');
+	versionElements.forEach(el => {
+		el.textContent = `v${VERSION_INFO.version}`;
+	});
+
+	// Update navbar version to be clickable
+	const navVersion = document.querySelector('.navbar-version');
+	if (navVersion && VERSION_INFO.buildTime) {
+		const buildDate = new Date(VERSION_INFO.buildTime);
+		const formattedDate = buildDate.toLocaleString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit'
+		});
+
+		navVersion.title = `Build: ${formattedDate} UTC`;
+		navVersion.style.cursor = 'pointer';
+		navVersion.addEventListener('click', () => {
+			showToast(`v${VERSION_INFO.version} • Built ${formattedDate} UTC`, 'default');
+		});
+	}
+}
+
+// =========================================
 // Initialize App
 // =========================================
 
 async function init() {
+	// Fetch version info first
+	await fetchVersionInfo();
 	// Initialize features first
 	initModal();
 	initCategoryFilters();

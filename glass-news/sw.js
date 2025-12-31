@@ -3,7 +3,7 @@
  * Handles caching, offline support, and push notifications
  */
 
-const CACHE_NAME = "glass-news-v10-install-fix";
+const CACHE_NAME = "glass-news-v2.2.7";
 const OFFLINE_URL = "offline.html";
 
 // Assets to cache on install
