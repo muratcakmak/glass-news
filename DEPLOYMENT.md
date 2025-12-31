@@ -67,7 +67,7 @@ To get these keys:
 - **OpenRouter API Key**: Sign up at https://openrouter.ai/ and create a key
 - **Reddit Credentials**: Go to https://www.reddit.com/prefs/apps → Create App → Select "script"
 
-### Step 5: Deploy
+### Step 5: Deploy Backend (Worker)
 
 ```bash
 bun run deploy
@@ -83,11 +83,24 @@ Published news-data (X.XX sec)
   https://news-data.your-subdomain.workers.dev
 ```
 
-🎉 Your worker is now live!
+### Step 6: Deploy Frontend (Pages)
 
-### Step 6: Test Your Deployment
+```bash
+bun run deploy:pages
+```
 
-Health check:
+This will deploy the `glass-news` folder to Cloudflare Pages.
+First time run will ask to create the project.
+
+Output:
+```
+✨ Success! Uploaded 10 files
+✨ Deployment complete! Take a peek over at https://glass-news.pages.dev
+```
+
+### Step 7: Test Your Deployment
+
+Health check (Backend):
 ```bash
 curl https://news-data.your-subdomain.workers.dev/health
 ```
@@ -99,10 +112,8 @@ curl -X POST https://news-data.your-subdomain.workers.dev/api/crawl \
   -d '{"sources": ["english"]}'
 ```
 
-Get articles:
-```bash
-curl https://news-data.your-subdomain.workers.dev/api/articles
-```
+Visit the App (Frontend):
+Go to https://glass-news.pages.dev (or your custom domain)
 
 ### Step 7: Monitor
 

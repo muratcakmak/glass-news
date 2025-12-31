@@ -8,6 +8,8 @@
 // =========================================
 
 const API_URL = "https://news-data.omc345.workers.dev";
+const VAPID_PUBLIC_KEY =
+	"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM";
 let NEWS_DATA = [];
 
 /**
@@ -137,6 +139,7 @@ let currentCategory = "all";
 let currentSearch = "";
 let currentSort = "latest"; // 'latest' or 'short'
 let ALL_LOADED_ARTICLES = []; // Keep a backup for local search
+let bodyScrollY = 0; // Track scroll position for body lock
 
 // =========================================
 // Utility Functions
@@ -638,8 +641,11 @@ function showArticleModal(article, pushToHistory = true) {
 		});
 	}, 10);
 
-	// Prevent body scroll
-	document.body.style.overflow = "hidden";
+	// Prevent body scroll (Robust iOS Fix)
+	bodyScrollY = window.scrollY;
+	document.body.style.position = "fixed";
+	document.body.style.top = `-${bodyScrollY}px`;
+	document.body.style.width = "100%";
 }
 
 /**
@@ -667,7 +673,10 @@ function hideArticleModal(updateHistory = true) {
 	if (navbar) navbar.classList.remove("page-blur");
 
 	// Restore body scroll
-	document.body.style.overflow = "";
+	document.body.style.position = "";
+	document.body.style.top = "";
+	document.body.style.width = "";
+	window.scrollTo(0, bodyScrollY);
 }
 
 /**
@@ -798,6 +807,83 @@ async function requestNotificationPermission() {
 	}
 
 	try {
+		const permission = await Notification.requestPermission();
+		if (permission === "granted") {
+			showToast("Notifications enabled!", "success");
+			
+			// Subscribe to Push
+			await subscribeToPush();
+			
+			if (elements.notificationBanner) {
+				elements.notificationBanner.style.display = "none";
+				// Store dismissed state forever if enabled
+				localStorage.setItem("notificationBannerDismissed", "true");
+			}
+			return true;
+		}
+		return false;
+	} catch (error) {
+		console.error("Error requesting permission:", error);
+		showToast("Could not enable notifications", "error");
+		return false;
+	}
+}
+
+/**
+ * Subscribe to Push Notifications
+ */
+async function subscribeToPush() {
+	if (!("serviceWorker" in navigator)) return;
+
+	try {
+		const registration = await navigator.serviceWorker.ready;
+		
+		// Subscribe
+		const subscription = await registration.pushManager.subscribe({
+			userVisibleOnly: true,
+			applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+		});
+
+		console.log("Push Subscription:", subscription);
+
+		// Send to backend
+		const response = await fetch(`${API_URL}/api/subscribe`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(subscription),
+		});
+
+		if (response.ok) {
+			console.log("Subscribed to push notifications on server");
+			showToast("Detailed: Connected to Push Server ✅", "success");
+		} else {
+			throw new Error("Server rejected subscription");
+		}
+	} catch (error) {
+		console.error("Failed to subscribe to push:", error);
+		showToast(`Push Error: ${error.message}`, "error");
+	}
+}
+
+/**
+ * Convert VAPID key to Uint8Array
+ */
+function urlBase64ToUint8Array(base64String) {
+	const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+	const base64 = (base64String + padding)
+		.replace(/\-/g, "+")
+		.replace(/_/g, "/");
+
+	const rawData = window.atob(base64);
+	const outputArray = new Uint8Array(rawData.length);
+
+	for (let i = 0; i < rawData.length; ++i) {
+		outputArray[i] = rawData.charCodeAt(i);
+	}
+	return outputArray;
+}
 		const permission = await Notification.requestPermission();
 
 		if (permission === "granted") {

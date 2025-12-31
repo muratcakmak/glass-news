@@ -230,6 +230,25 @@ a {
 		var(--space-md);
 }
 
+/* Scrim to hide content scrolling behind status bar */
+.navbar::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 100%;
+	background: linear-gradient(
+		to bottom,
+		var(--bg-primary) 25%,
+		rgba(var(--bg-primary), 0) 100%
+	);
+	mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+	-webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+	z-index: -1;
+	pointer-events: none;
+}
+
 .navbar-inner {
 	display: flex;
 	align-items: center;
@@ -1127,6 +1146,7 @@ a {
 	max-height: 85vh;
 	overflow-y: auto;
 	overflow-x: hidden;
+	overscroll-behavior: contain;
 	background: var(--modal-bg);
 	border: 1px solid var(--glass-border-light);
 	border-radius: var(--radius-xl);
@@ -1388,6 +1408,7 @@ a {
 	.article-modal-container {
 		margin-top: -60px;
 		padding: var(--space-lg);
+		padding-bottom: 120px; /* Ensure content clears bottom safe area */
 	}
 
 	.article-modal-close {

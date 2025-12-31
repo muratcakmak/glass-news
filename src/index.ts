@@ -11,6 +11,7 @@ import {
 	listArticles,
 	getArticleFromR2,
 } from "./utils/storage";
+import webpush from "web-push";
 
 export default {
 	async fetch(
@@ -20,10 +21,17 @@ export default {
 	): Promise<Response> {
 		const url = new URL(request.url);
 
+		// VAPID Configuration
+		webpush.setVapidDetails(
+			env.VAPID_SUBJECT,
+			"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM",
+			env.VAPID_PRIVATE_KEY,
+		);
+
 		// CORS headers for API access
 		const corsHeaders = {
 			"Access-Control-Allow-Origin": "*",
-			"Access-Control-Allow-Methods": "GET, OPTIONS",
+			"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 			"Access-Control-Allow-Headers": "Content-Type",
 		};
 
@@ -32,6 +40,10 @@ export default {
 		}
 
 		// API Routes
+		if (url.pathname === "/api/subscribe" && request.method === "POST") {
+			return handleSubscribe(request, env, corsHeaders);
+		}
+
 		if (url.pathname === "/api/articles") {
 			return handleGetArticles(url, env, corsHeaders);
 		}
@@ -52,6 +64,17 @@ export default {
 		if (url.pathname === "/api/clean" && request.method === "POST") {
 			// Clean KV store and optionally R2 bucket
 			return handleCleanStorage(env, corsHeaders);
+		}
+
+		if (url.pathname === "/api/test-push" && request.method === "POST") {
+			return handleTestPush(request, env, corsHeaders);
+		}
+
+		if (url.pathname === "/api/debug-subs") {
+			const { keys } = await env.NEWS_KV.list({ prefix: "sub:" });
+			return new Response(JSON.stringify({ count: keys.length }), {
+				headers: { ...corsHeaders, "Content-Type": "application/json" },
+			});
 		}
 
 		// Isolated Image Gen Test Route
@@ -113,73 +136,152 @@ export default {
 			new Date(event.scheduledTime).toISOString(),
 		);
 
-		// Determine which sources to crawl based on time
-		const hour = new Date(event.scheduledTime).getUTCHours();
-		const shouldCrawlTurkish = hour >= 6 && hour <= 15;
-		const shouldCrawlEnglish =
-			(hour >= 17 && hour <= 23) || (hour >= 0 && hour <= 2);
-
 		const allArticles: NewsArticle[] = [];
 
 		try {
-			// ONLY CRAWL EKSISOZLUK FOR NOW
-			console.log("Crawling eksisozluk...");
-			const eksiArticles = await crawlEksisozluk(env);
+			// 1. Fetch HackerNews (Limit: 2)
+			console.log("Crawling HackerNews...");
+			try {
+				const hnArticles = await crawlHackerNews();
+				const limitedHN = hnArticles.slice(0, 2);
 
-			// Fetch content using SERPER for each article
-			console.log(
-				`Fetching content for ${eksiArticles.length} eksisozluk articles...`,
-			);
-			for (const article of eksiArticles) {
-				if (!article.originalContent) {
-					console.log(`[Eksi] Fetching: ${article.originalUrl}`);
-					article.originalContent = await fetchEksisozlukDetail(
-						article.originalUrl,
-						env,
-						article.originalTitle,
-					);
-					// If content fetching fails, use title as fallback
-					if (!article.originalContent) {
-						article.originalContent = article.originalTitle;
-						console.warn(
-							`[Eksi] Using title as content fallback for ${article.id}`,
-						);
+				// Fetch comments for HN
+				for (const article of limitedHN) {
+					const hnDiscussionUrl = `https://news.ycombinator.com/item?id=${article.id.replace("hn-", "")}`;
+					const comments = await fetchHNArticleContent(hnDiscussionUrl);
+					if (comments) {
+						article.originalContent = `${article.originalTitle}\n\n${comments}`;
 					}
 				}
+				allArticles.push(...limitedHN);
+				console.log(`Added ${limitedHN.length} HackerNews articles`);
+			} catch (e) {
+				console.error("Error crawling HackerNews:", e);
 			}
 
-			allArticles.push(...eksiArticles);
-			console.log(`Crawled ${eksiArticles.length} eksisozluk articles`);
+			// 2. Fetch T24 (Limit: 3)
+			console.log("Crawling T24...");
+			try {
+				const t24Articles = await crawlT24(env);
+				const limitedT24 = t24Articles.slice(0, 3);
 
-			// TODO: Re-enable other sources later
-			// if (shouldCrawlEnglish) {
-			// 	console.log("Crawling English sources...");
-			// 	const [hnArticles, wikiArticles, redditArticles] = await Promise.all([
-			// 		crawlHackerNews(),
-			// 		crawlWikipedia(),
-			// 		crawlReddit(env),
-			// 	]);
-			// 	allArticles.push(...hnArticles, ...wikiArticles, ...redditArticles);
-			// }
+				// Fetch full content for T24
+				for (const article of limitedT24) {
+					if (article.originalContent && article.originalContent.length < 100) {
+						const fullContent = await fetchT24ArticleDetail(
+							article.originalUrl,
+							env,
+						);
+						if (fullContent) {
+							article.originalContent = fullContent;
+						}
+					}
+				}
+				allArticles.push(...limitedT24);
+				console.log(`Added ${limitedT24.length} T24 articles`);
+			} catch (e) {
+				console.error("Error crawling T24:", e);
+			}
+
+			// 3. Fetch Eksisozluk (Limit: 3)
+			console.log("Crawling Eksisozluk...");
+			try {
+				const eksiArticles = await crawlEksisozluk(env);
+				const limitedEksi = eksiArticles.slice(0, 3);
+
+				// Fetch content for Eksi
+				for (const article of limitedEksi) {
+					if (!article.originalContent) {
+						article.originalContent = await fetchEksisozlukDetail(
+							article.originalUrl,
+							env,
+							article.originalTitle,
+						);
+						if (!article.originalContent) {
+							article.originalContent = article.originalTitle;
+						}
+					}
+				}
+				allArticles.push(...limitedEksi);
+				console.log(`Added ${limitedEksi.length} Eksisozluk articles`);
+			} catch (e) {
+				console.error("Error crawling Eksisozluk:", e);
+			}
 
 			if (allArticles.length === 0) {
-				console.log("No articles to process at this time");
+				console.log("No articles to process");
 				return;
 			}
 
-			// Transform and save articles
-			console.log(`Processing ${allArticles.length} articles...`);
+			// Transform and save all articles
+			console.log(`Processing ${allArticles.length} total articles...`);
+			const processedArticles: NewsArticle[] = [];
 
 			for (const article of allArticles) {
 				try {
 					const transformed = await transformContent(article, env);
 					await saveArticleToR2(transformed, env);
+					processedArticles.push(transformed);
 				} catch (error) {
 					console.error(`Error processing article ${article.id}:`, error);
 				}
 			}
 
-			console.log(`Successfully processed ${allArticles.length} articles`);
+			console.log(
+				`Successfully processed ${processedArticles.length} articles`,
+			);
+
+			// Send Push Notifications for new articles
+			if (processedArticles.length > 0) {
+				console.log("Sending push notifications...");
+
+				// Configure VAPID
+				webpush.setVapidDetails(
+					env.VAPID_SUBJECT,
+					"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM",
+					env.VAPID_PRIVATE_KEY,
+				);
+
+				try {
+					const { keys } = await env.NEWS_KV.list({ prefix: "sub:" });
+					console.log(`Found ${keys.length} subscriptions`);
+
+					// Create notification payload
+					const firstArticle = processedArticles[0];
+					const articleTitle =
+						firstArticle.transformedTitle || firstArticle.originalTitle;
+
+					const notification = {
+						title: "New Articles available",
+						body: `${processedArticles.length} new stories added. Top: ${articleTitle}`,
+						url: `/?article=${firstArticle.id}`,
+						icon: "/icons/icon-192.png",
+						badge: "/icons/badge-72.png",
+					};
+
+					const payload = JSON.stringify(notification);
+
+					for (const key of keys) {
+						try {
+							const subData = await env.NEWS_KV.get(key.name);
+							if (!subData) continue;
+
+							const subscription = JSON.parse(subData);
+							await webpush.sendNotification(subscription, payload);
+							console.log(`Push sent to ${key.name}`);
+						} catch (error: any) {
+							if (error.statusCode === 410) {
+								console.log(`Subscription expired: ${key.name}`);
+								await env.NEWS_KV.delete(key.name);
+							} else {
+								console.error(`Push failed for ${key.name}:`, error);
+							}
+						}
+					}
+				} catch (error) {
+					console.error("Error sending push notifications:", error);
+				}
+			}
 		} catch (error) {
 			console.error("Error in scheduled task:", error);
 		}
@@ -488,6 +590,100 @@ async function handleCleanStorage(
 		);
 	} catch (error) {
 		console.error("Error cleaning storage:", error);
+		return new Response(JSON.stringify({ error: "Internal server error" }), {
+			status: 500,
+			headers: { ...corsHeaders, "Content-Type": "application/json" },
+		});
+	}
+}
+
+async function handleSubscribe(
+	request: Request,
+	env: Env,
+	corsHeaders: Record<string, string>,
+): Promise<Response> {
+	try {
+		const subscription = await request.json();
+
+		// Use endpoint as unique ID
+		// @ts-ignore
+		const id = btoa(subscription.endpoint).substring(0, 32);
+
+		await env.NEWS_KV.put(`sub:${id}`, JSON.stringify(subscription));
+
+		return new Response(JSON.stringify({ success: true }), {
+			headers: { ...corsHeaders, "Content-Type": "application/json" },
+		});
+	} catch (error) {
+		console.error("Error subscribing:", error);
+		return new Response(JSON.stringify({ error: "Failed to subscribe" }), {
+			status: 500,
+			headers: { ...corsHeaders, "Content-Type": "application/json" },
+		});
+	}
+}
+
+async function handleTestPush(
+	request: Request,
+	env: Env,
+	corsHeaders: Record<string, string>,
+): Promise<Response> {
+	try {
+		const body = (await request.json()) as { title?: string; message?: string };
+		const title = body.title || "Test Notification";
+		const message =
+			body.message || "This is a test push notification from the backend.";
+
+		console.log(`Sending test push: ${title} - ${message}`);
+
+		// Configure VAPID
+		webpush.setVapidDetails(
+			env.VAPID_SUBJECT,
+			"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM",
+			env.VAPID_PRIVATE_KEY,
+		);
+
+		const { keys } = await env.NEWS_KV.list({ prefix: "sub:" });
+		let successCount = 0;
+		let failCount = 0;
+
+		const payload = JSON.stringify({
+			title,
+			body: message,
+			url: "/?test=true",
+			icon: "/icons/icon-192.png",
+			badge: "/icons/badge-72.png",
+		});
+
+		for (const key of keys) {
+			try {
+				const subData = await env.NEWS_KV.get(key.name);
+				if (!subData) continue;
+
+				const subscription = JSON.parse(subData);
+				await webpush.sendNotification(subscription, payload);
+				successCount++;
+			} catch (error: any) {
+				console.error(`Push failed for ${key.name}:`, error);
+				if (error.statusCode === 410) {
+					await env.NEWS_KV.delete(key.name);
+				}
+				failCount++;
+			}
+		}
+
+		return new Response(
+			JSON.stringify({
+				success: true,
+				sent: successCount,
+				failed: failCount,
+			}),
+			{
+				headers: { ...corsHeaders, "Content-Type": "application/json" },
+			},
+		);
+	} catch (error) {
+		console.error("Error in test push:", error);
 		return new Response(JSON.stringify({ error: "Internal server error" }), {
 			status: 500,
 			headers: { ...corsHeaders, "Content-Type": "application/json" },

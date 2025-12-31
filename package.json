@@ -8,14 +8,19 @@
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
     "test": "wrangler dev --test-scheduled",
-    "setup": "wrangler r2 bucket create news-articles && wrangler kv:namespace create NEWS_KV"
+    "setup": "wrangler r2 bucket create news-articles && wrangler kv:namespace create NEWS_KV",
+    "deploy:pages": "wrangler pages deploy glass-news --project-name glass-news"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251230.0",
     "@types/bun": "latest",
+    "@types/web-push": "^3.6.4",
     "wrangler": "^4.54.0"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
   }
 }
