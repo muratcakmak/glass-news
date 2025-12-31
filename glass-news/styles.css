@@ -1194,14 +1194,6 @@ p {
 	transition: all 0.4s var(--ease-out);
 	scrollbar-width: none;
 	-ms-overflow-style: none;
-	/* Enforce dark theme colors for modal content regardless of system theme */
-	color: #ffffff;
-	--text-primary: #ffffff;
-	--text-secondary: rgba(255, 255, 255, 0.7);
-	--text-tertiary: rgba(255, 255, 255, 0.5);
-	--glass-border: rgba(255, 255, 255, 0.1);
-	--glass-bg: rgba(255, 255, 255, 0.05);
-	--glass-bg-hover: rgba(255, 255, 255, 0.1);
 }
 
 /* Glass Sheen Effect */
@@ -1516,5 +1508,42 @@ p {
 		color: var(--accent);
 		border-color: var(--accent);
 		background: var(--accent-subtle);
+	}
+	/* Explicit Light Mode Overrides for Modal */
+	.article-modal-content {
+		background: rgba(255, 255, 255, 0.95);
+		border-color: rgba(0, 0, 0, 0.1);
+		color: #000000;
+		--text-primary: #1c1c1e;
+		--text-secondary: rgba(0, 0, 0, 0.7);
+		--text-tertiary: rgba(0, 0, 0, 0.5);
+		box-shadow: 0 40px 80px rgba(0, 0, 0, 0.2);
+	}
+
+	.article-modal-content::before {
+		background: linear-gradient(
+			125deg,
+			rgba(255, 255, 255, 0.4) 0%,
+			transparent 40%,
+			transparent 60%,
+			rgba(255, 255, 255, 0.2) 100%
+		);
+	}
+
+	.article-modal-meta {
+		background: rgba(0, 0, 0, 0.05);
+		border-color: rgba(0, 0, 0, 0.1);
+		color: var(--text-secondary);
+	}
+
+	.article-modal-tag {
+		background: rgba(0, 0, 0, 0.05);
+		border-color: rgba(0, 0, 0, 0.1);
+		color: var(--text-secondary);
+	}
+
+	.article-modal-tag:hover {
+		background: rgba(0, 0, 0, 0.1);
+		color: var(--text-primary);
 	}
 }
