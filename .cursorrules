@@ -1,0 +1,16 @@
+# Deployment Rules
+
+Always follow this two-step process when deploying changes:
+
+1.  **Deployment**: Run the deployment command to push changes to the hosting provider.
+    ```bash
+    bun run deploy:pages
+    ```
+2.  **Git Push**: Immediately after a successful deployment, add all changes, commit them with a descriptive message, and push to the remote repository.
+    ```bash
+    git add .
+    git commit -m "chore: [description of changes]"
+    git push origin $(git branch --show-current)
+    ```
+
+**IMPORTANT**: Never skip the second step (Git Push). The remote repository must always match the deployed version.
