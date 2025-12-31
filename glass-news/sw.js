@@ -3,7 +3,7 @@
  * Handles caching, offline support, and push notifications
  */
 
-const CACHE_NAME = "glass-news-v2-greentext";
+const CACHE_NAME = "glass-news-v10-install-fix";
 const OFFLINE_URL = "offline.html";
 
 // Assets to cache on install
@@ -136,7 +136,23 @@ self.addEventListener("fetch", (event) => {
 		return;
 	}
 
-	// For static assets - Cache first, then network
+	// For core app files (JS/CSS) - Network First to avoid stale UI
+	if (request.destination === "script" || request.destination === "style") {
+		event.respondWith(
+			fetch(request)
+				.then((response) => {
+					const responseClone = response.clone();
+					caches.open(CACHE_NAME).then((cache) => {
+						cache.put(request, responseClone);
+					});
+					return response;
+				})
+				.catch(() => caches.match(request)),
+		);
+		return;
+	}
+
+	// For other static assets - Cache first, then network
 	event.respondWith(
 		caches.match(request).then((cachedResponse) => {
 			if (cachedResponse) {

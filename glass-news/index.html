@@ -3,54 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Glass News</title>
   
-  <!-- PWA Meta Tags -->
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0a0a0f">
-  <meta name="description" content="Glass News - Your Glass-powered news application with real-time updates">
-  <meta name="mobile-web-app-capable" content="yes">
-  
-  <!-- iOS PWA Meta Tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Glass News">
   
   <!-- Icons -->
   <link rel="icon" type="image/png" href="icons/favicon.png">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-
-  <!-- iOS Splash Screens -->
-  <link rel="apple-touch-startup-image" href="icons/apple-touch-icon.png">
-  
-  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <title>Glass News</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <!-- SVG Filters for Liquid Glass Effect -->
-  <svg style="display: none;">
-    <defs>
-      <filter id="liquid-distortion">
-        <feTurbulence type="fractalNoise" baseFrequency="0.01 0.02" numOctaves="2" result="noise"/>
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" xChannelSelector="R" yChannelSelector="G"/>
-      </filter>
-    </defs>
+<body class="dark-theme">
+  <!-- Liquid Glass Background Filters -->
+  <svg style="position: absolute; width: 0; height: 0;" aria-hidden="true">
+    <filter id="glass-noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+      <feComponentTransfer>
+        <feFuncR type="linear" slope="0.05" />
+        <feFuncG type="linear" slope="0.05" />
+        <feFuncB type="linear" slope="0.05" />
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="overlay" />
+    </filter>
   </svg>
 
   <!-- Navigation -->
   <nav class="navbar">
     <div class="navbar-inner">
-      <a href="/" class="navbar-brand">Glass News</a>
-      
-
-
+      <a href="/" class="navbar-brand">Glass News <span style="font-size: 0.6em; opacity: 0.5; font-weight: 400; margin-left: 4px;">v2.2.5</span></a>
       <div class="navbar-actions">
-
+        <button class="btn btn-primary btn-sm" id="navInstallBtn" style="display: none; padding: 4px 12px; font-size: 0.8em; border-radius: 20px;">Install App</button>
         <button class="btn btn-icon" id="notificationBtn" aria-label="Notifications">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -79,15 +72,6 @@
           <button class="category-pill" data-category="community">Community</button>
           <button class="category-pill" data-category="turkey">Turkey</button>
         </div>
-        
-        <div class="sort-controls animate-in animate-delay-1">
-          <button class="btn btn-sm sort-btn" id="sortBtn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18M6 12h12M10 18h4"/>
-            </svg>
-            <span id="sortLabel">Latest</span>
-          </button>
-        </div>
       </div>
 
       <!-- Featured Article -->
@@ -107,36 +91,75 @@
       </article>
 
       <!-- News Grid -->
-      <section class="news-section">
-        <h2 class="section-title">Latest Stories</h2>
+      <div class="news-grid-container">
         <div class="news-grid" id="newsGrid">
-          <!-- News cards will be rendered here -->
+          <!-- Articles will be injected here -->
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Scanning news feeds...</p>
+          </div>
         </div>
-      </section>
+      </div>
     </div>
   </main>
 
-  <!-- Notification Permission Banner -->
-  <div class="notification-banner" id="notificationBanner" style="display: none;">
-    <div class="notification-banner-content">
-      <div class="notification-banner-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-        </svg>
+  <!-- Article Modal -->
+  <div class="article-modal" id="articleModal">
+    <div class="article-modal-overlay" id="modalOverlay"></div>
+    <div class="article-modal-content">
+      <div class="article-modal-header">
+        <button class="modal-close" id="modalClose" aria-label="Close">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <div class="modal-actions">
+          <button class="modal-action-btn" id="modalShare" aria-label="Share">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+              <polyline points="16 6 12 2 8 6"></polyline>
+              <line x1="12" y1="2" x2="12" y2="15"></line>
+            </svg>
+          </button>
+        </div>
       </div>
-      <div class="notification-banner-text">
-        <p class="notification-banner-title">Stay Updated</p>
-        <p class="notification-banner-description">Get notified about breaking Glass news and updates.</p>
-      </div>
-      <div class="notification-banner-actions">
-        <button class="btn" id="notificationDismiss">Later</button>
-        <button class="btn btn-primary" id="notificationEnable">Enable</button>
+      
+      <div class="article-modal-body">
+        <div class="modal-image-container" id="modalImageContainer">
+          <img id="modalImage" src="" alt="">
+          <div class="modal-image-overlay"></div>
+        </div>
+        
+        <div class="modal-content-wrapper">
+          <div class="modal-meta-header">
+            <span class="modal-category" id="modalCategory">Category</span>
+            <span class="modal-date" id="modalDate">Jan 1, 2024</span>
+          </div>
+          
+          <h1 class="modal-title" id="modalTitle">Article Title</h1>
+          
+          <div class="modal-author-section">
+            <div class="modal-author-avatar" id="modalAuthorAvatar"></div>
+            <div class="modal-author-info">
+              <span class="modal-author-name" id="modalAuthor">Author Name</span>
+              <span class="modal-read-time" id="modalReadTime">5 min read</span>
+            </div>
+          </div>
+          
+          <div class="modal-main-content" id="modalMainContent">
+            <!-- Article content will be injected here -->
+          </div>
+          
+          <div class="modal-tags" id="modalTags">
+            <!-- Tags will be injected here -->
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Install PWA Banner -->
+  <!-- Install Banner -->
   <div class="install-banner" id="installBanner" style="display: none;">
     <div class="notification-banner-content">
       <div class="notification-banner-icon">
@@ -157,57 +180,35 @@
     </div>
   </div>
 
-  <!-- Toast Notification -->
-  <div class="toast" id="toast" role="alert" aria-live="polite"></div>
-
-  <!-- Article Modal -->
-  <div class="article-modal" id="articleModal" style="display: none;">
-    <div class="article-modal-overlay"></div>
-    <div class="article-modal-content">
-      <button class="article-modal-close" id="modalClose" aria-label="Close">
+  <!-- Notification Banner -->
+  <div class="notification-banner" id="notificationBanner" style="display: none;">
+    <div class="notification-banner-content">
+      <div class="notification-banner-icon">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
         </svg>
-      </button>
-      <div class="article-modal-body">
-        <div class="article-modal-image-container" id="modalImageContainer">
-          <img id="modalImage" alt="" loading="lazy" class="article-modal-image">
-        </div>
-        
-        <div class="article-modal-container">
-          <div class="article-modal-header">
-            <span class="article-modal-category" id="modalCategory"></span>
-            <h2 class="article-modal-title" id="modalTitle"></h2>
-            <div class="article-modal-meta">
-              <span id="modalAuthor"></span>
-              <span id="modalDate"></span>
-              <span id="modalReadTime"></span>
-            </div>
-          </div>
-          
-          <div class="article-modal-tags" id="modalTags"></div>
-          
-          <div class="article-modal-text" id="modalContent"></div>
-          
-          <div class="article-modal-footer">
-            <button class="btn btn-share" id="modalShare">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                <polyline points="16 6 12 2 8 6"/>
-                <line x1="12" y1="2" x2="12" y2="15"/>
-              </svg>
-              Share
-            </button>
-            <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" id="modalSourceLink">
-              Read Original Source
-            </a>
-          </div>
-        </div>
+      </div>
+      <div class="notification-banner-text">
+        <p class="notification-banner-title">Stay Updated</p>
+        <p class="notification-banner-description">Enable notifications to never miss breaking news.</p>
+      </div>
+      <div class="notification-banner-actions">
+        <button class="btn" id="notificationDismiss">Maybe Later</button>
+        <button class="btn btn-primary" id="notificationEnable">Enable</button>
       </div>
     </div>
   </div>
 
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Hidden Haptic Trigger for iOS 18+ -->
+  <label id="haptic-trigger" style="position: fixed; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; pointer-events: none;" aria-hidden="true">
+    <input type="checkbox" switch id="haptic-checkbox">
+  </label>
+
+  <!-- Application Logic -->
   <script src="app.js"></script>
 </body>
 </html>

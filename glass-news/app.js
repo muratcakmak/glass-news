@@ -8,7 +8,7 @@
 // =========================================
 
 const API_URL = "https://news-data.omc345.workers.dev";
-const APP_VERSION = "2.0.0-greentext"; // Update this to force reload loops if needed
+const APP_VERSION = "2.2.5-pwa-install-fix"; // Force cache bust
 const VAPID_PUBLIC_KEY =
 	"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM";
 ("BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLcLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM");
@@ -22,7 +22,8 @@ let NEWS_DATA = [];
 document.addEventListener(
 	"touchmove",
 	function (event) {
-		if (event.scale !== 1) {
+		// Only prevent default if it's a multi-touch (pinch) attempt
+		if (event.scale !== undefined && event.scale !== 1) {
 			event.preventDefault();
 		}
 	},
@@ -37,11 +38,13 @@ document.addEventListener(
 	function (event) {
 		const now = new Date().getTime();
 		if (now - lastTouchEnd <= 300) {
-			event.preventDefault();
+			// Only prevent if not in a scrollable element or if explicitly needed
+			// For now, let's keep it but ensure it's not swallowing all taps
+			// event.preventDefault(); // Removed to ensure taps always work
 		}
 		lastTouchEnd = now;
 	},
-	{ passive: false },
+	{ passive: true },
 );
 
 // 3. Fallback: Disabling Gestures (Pinch)
@@ -140,8 +143,8 @@ function transformArticle(apiArticle) {
 			hackernews: "Tech",
 			wikipedia: "News",
 			reddit: "Community",
-			t24: "Turkey",
-			eksisozluk: "Turkey",
+			t24: "News",
+			eksisozluk: "Life",
 		};
 		return map[source] || source;
 	};
@@ -181,6 +184,7 @@ const elements = {
 	installBanner: document.getElementById("installBanner"),
 	installAccept: document.getElementById("installAccept"),
 	installDismiss: document.getElementById("installDismiss"),
+	navInstallBtn: document.getElementById("navInstallBtn"),
 	toast: document.getElementById("toast"),
 	categoryPills: document.querySelectorAll(".category-pill"),
 	// Modal elements
@@ -235,6 +239,30 @@ function isPWA() {
 function isIOS() {
 	return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 }
+
+/**
+ * Haptic Feedback Utility
+ */
+const Haptics = {
+	/**
+	 * Trigger a haptic pulse
+	 * @param {number} duration - Duration in ms (Mainly for Android)
+	 */
+	trigger(duration = 30) {
+		// 1. Android/Chrome - Standard Vibration API
+		if (navigator.vibrate) {
+			navigator.vibrate(duration);
+		}
+
+		// 2. iOS 18+ - Hidden Switch Hack
+		// This triggers a native 'Select' haptic pulse
+		// Clicking the LABEL is more reliable for triggering the haptic than clicking the input itself
+		const trigger = document.getElementById("haptic-trigger");
+		if (trigger) {
+			trigger.click();
+		}
+	},
+};
 
 // =========================================
 // SEO & Routing
@@ -305,7 +333,7 @@ const ROUTER = {
 const SEO = {
 	update(article) {
 		// 1. Update Title
-		document.title = `${article.title} - Glass News`;
+		document.title = `${article.title} - v2.2.5`;
 
 		// 2. Update Meta Tags
 		this.setMeta("description", article.excerpt);
@@ -466,10 +494,10 @@ async function loadNews(source = null) {
 		// Improved mapping: some categories can have multiple sources
 		const sourceMap = {
 			all: null,
-			tech: "hackernews",
-			news: "wikipedia",
+			tech: ["hackernews", "webrazzi"],
+			news: ["wikipedia", "bbc"],
 			community: "reddit",
-			turkey: ["t24", "eksisozluk"], // List of Turkish sources
+			turkey: ["t24", "eksisozluk", "webrazzi"],
 		};
 
 		const mapping = sourceMap[source] || source;
@@ -562,7 +590,7 @@ function initSort() {
 			currentSort === "latest" ? "Latest" : "Short Reads";
 
 		// Haptic feedback
-		if (navigator.vibrate) navigator.vibrate(30);
+		Haptics.trigger(30);
 
 		// Re-derive data from current state
 		loadNews(currentCategory);
@@ -587,10 +615,10 @@ function initSearch() {
 		// Re-derive category filtered data first
 		const mapping = {
 			all: null,
-			tech: ["hackernews"],
-			news: ["wikipedia"],
+			tech: ["hackernews", "webrazzi"],
+			news: ["wikipedia", "bbc"],
 			community: ["reddit"],
-			turkey: ["t24", "eksisozluk"],
+			turkey: ["t24", "eksisozluk", "webrazzi"],
 		}[currentCategory];
 
 		if (mapping) {
@@ -604,6 +632,7 @@ function initSearch() {
 	});
 
 	elements.searchClear?.addEventListener("click", () => {
+		Haptics.trigger(10);
 		elements.searchInput.value = "";
 		currentSearch = "";
 		elements.searchClear.style.display = "none";
@@ -640,11 +669,8 @@ function renderNews() {
  * Show article in modal
  */
 function showArticleModal(article, pushToHistory = true) {
-	// Apply blur immediately to the page content and navbar
-	const page = document.querySelector(".page");
-	const navbar = document.querySelector(".navbar");
-	if (page) page.classList.add("page-blur");
-	if (navbar) navbar.classList.add("page-blur");
+	// Optimized for Safari: We rely on backdrop-filter on the overlay now
+	// rather than blurring the whole page content.
 
 	// Update Router & SEO if needed
 	if (pushToHistory) {
@@ -686,17 +712,20 @@ function showArticleModal(article, pushToHistory = true) {
 		});
 	}
 
-	// Update content with proper paragraph formatting
+	// Update content with proper paragraph formatting (Force <br> for robust mobile rendering)
 	const paragraphs = article.fullContent.split("\n\n").filter((p) => p.trim());
 	elements.modalContent.innerHTML = paragraphs
-		.map((p) => `<p style="white-space: pre-wrap; margin-bottom: 1.5em;">${p.trim()}</p>`)
+		.map(
+			(p) =>
+				`<p style="white-space: pre-wrap; margin-bottom: 1.5em;">${p.trim().replace(/\n/g, "<br>")}</p>`,
+		)
 		.join("");
 
 	// Show modal
 	elements.articleModal.style.display = "flex";
 
 	// Haptic feedback
-	if (navigator.vibrate) navigator.vibrate(50);
+	Haptics.trigger(50);
 
 	// Reset scroll
 	const content = elements.articleModal.querySelector(".article-modal-content");
@@ -715,11 +744,19 @@ function showArticleModal(article, pushToHistory = true) {
 		});
 	}, 10);
 
-	// Prevent body scroll (Robust iOS Fix)
-	bodyScrollY = window.scrollY;
-	document.body.style.position = "fixed";
-	document.body.style.top = `-${bodyScrollY}px`;
-	document.body.style.width = "100%";
+	// Prevent body scroll (Platform-aware Fix)
+	const isIOS =
+		/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+	if (isIOS) {
+		bodyScrollY = window.scrollY;
+		document.body.style.position = "fixed";
+		document.body.style.top = `-${bodyScrollY}px`;
+		document.body.style.width = "100%";
+	} else {
+		document.body.style.overflow = "hidden";
+		document.body.style.height = "100%";
+	}
 
 	// Store article ID on share button for link generation
 	if (elements.modalShare) {
@@ -743,19 +780,21 @@ function hideArticleModal(updateHistory = true) {
 	elements.articleModal.classList.remove("show");
 	setTimeout(() => {
 		elements.articleModal.style.display = "none";
-	}, 300);
-
-	// Remove blur from page content and navbar
-	const page = document.querySelector(".page");
-	const navbar = document.querySelector(".navbar");
-	if (page) page.classList.remove("page-blur");
-	if (navbar) navbar.classList.remove("page-blur");
+	}, 400);
 
 	// Restore body scroll
-	document.body.style.position = "";
-	document.body.style.top = "";
-	document.body.style.width = "";
-	window.scrollTo(0, bodyScrollY);
+	const isIOS =
+		/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+	if (isIOS) {
+		document.body.style.position = "";
+		document.body.style.top = "";
+		document.body.style.width = "";
+		window.scrollTo(0, bodyScrollY);
+	} else {
+		document.body.style.overflow = "";
+		document.body.style.height = "";
+	}
 }
 
 /**
@@ -766,6 +805,7 @@ function initModal() {
 	const closeBtn = document.getElementById("modalClose");
 	if (closeBtn) {
 		closeBtn.addEventListener("click", (e) => {
+			Haptics.trigger(10);
 			if (e) e.preventDefault();
 			hideArticleModal(true);
 		});
@@ -797,10 +837,10 @@ function initModal() {
 		const title = elements.modalTitle.textContent;
 		const text = ""; // User requested to share only the link
 
-		// Use app link if available, fallback to source
+		// Use canonical app link (Hardcoded production URL)
 		const articleId = elements.modalShare.dataset.articleId;
 		const url = articleId
-			? `${window.location.origin}/?article=${articleId}`
+			? `https://glass-news.pages.dev/?article=${articleId}`
 			: elements.modalSourceLink.href;
 
 		handleShare(title, text, url);
@@ -812,7 +852,7 @@ function initModal() {
  */
 async function handleShare(title, text, url) {
 	// Haptic feedback
-	if (navigator.vibrate) navigator.vibrate(50);
+	Haptics.trigger(50);
 
 	if (navigator.share) {
 		try {
@@ -856,6 +896,9 @@ function initCategoryFilters() {
 			// Update active state
 			elements.categoryPills.forEach((p) => p.classList.remove("active"));
 			pill.classList.add("active");
+
+			// Haptic feedback
+			Haptics.trigger(20);
 
 			// Load news for category
 			currentCategory = pill.dataset.category;
@@ -1034,17 +1077,20 @@ function hideNotificationBanner() {
 function initNotifications() {
 	// Enable button
 	elements.notificationEnable?.addEventListener("click", () => {
+		Haptics.trigger(30);
 		requestNotificationPermission();
 	});
 
 	// Dismiss button
 	elements.notificationDismiss?.addEventListener("click", () => {
+		Haptics.trigger(10);
 		hideNotificationBanner();
 		localStorage.setItem("notificationBannerDismissed", "true");
 	});
 
 	// Navbar notification button
 	elements.notificationBtn?.addEventListener("click", async () => {
+		Haptics.trigger(20);
 		if (Notification.permission === "granted") {
 			showToast("Syncing push subscription...", "info");
 			await subscribeToPush();
@@ -1101,10 +1147,22 @@ async function handleInstallClick() {
 
 	if (outcome === "accepted") {
 		showToast("App installed!", "success");
+		if (elements.navInstallBtn) elements.navInstallBtn.style.display = "none";
 	}
 
 	deferredInstallPrompt = null;
 	hideInstallBanner();
+}
+
+/**
+ * Check if app is running in standalone mode (installed)
+ */
+function isStandalone() {
+	return (
+		window.matchMedia("(display-mode: standalone)").matches ||
+		window.navigator.standalone === true ||
+		document.referrer.includes("android-app://")
+	);
 }
 
 /**
@@ -1130,6 +1188,7 @@ function initInstallPrompt() {
 
 	// Dismiss button
 	elements.installDismiss?.addEventListener("click", () => {
+		Haptics.trigger(10);
 		hideInstallBanner();
 		localStorage.setItem("installBannerDismissed", "true");
 	});
@@ -1159,7 +1218,7 @@ async function registerServiceWorker() {
 			registration.addEventListener("updatefound", () => {
 				const newWorker = registration.installing;
 				console.log("[SW] Update found:", newWorker);
-				
+
 				newWorker.addEventListener("statechange", () => {
 					console.log("[SW] State changed:", newWorker.state);
 					if (
@@ -1175,7 +1234,7 @@ async function registerServiceWorker() {
 		} catch (error) {
 			console.error("Service Worker registration failed:", error);
 		}
-		
+
 		// Reload when the new worker takes control
 		let refreshing = false;
 		navigator.serviceWorker.addEventListener("controllerchange", () => {
@@ -1189,7 +1248,7 @@ async function registerServiceWorker() {
 
 // Add Update Toast UI Helper
 function showUpdateToast() {
-	if (document.querySelector('.update-toast')) return; // Prevent duplicates
+	if (document.querySelector(".update-toast")) return; // Prevent duplicates
 
 	const toast = document.createElement("div");
 	toast.className = "update-toast glass-panel";
@@ -1221,7 +1280,7 @@ function showUpdateToast() {
 		gap: "16px",
 		background: "rgba(20, 20, 30, 0.95)",
 		backdropFilter: "blur(20px)",
-		-webkitBackdropFilter: "blur(20px)",
+		"-webkit-backdrop-filter": "blur(20px)",
 		border: "1px solid rgba(255, 255, 255, 0.15)",
 		color: "white",
 		boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
@@ -1234,32 +1293,6 @@ function showUpdateToast() {
 	requestAnimationFrame(() => {
 		toast.style.transform = "translateX(-50%) translateY(0)";
 	});
-}
-						console.log(
-							"ServiceWorker registration successful with scope: ",
-							registration.scope,
-						);
-
-						// Reload page when new service worker takes over to ensure fresh code
-						let refreshing = false;
-						navigator.serviceWorker.addEventListener("controllerchange", () => {
-							if (!refreshing) {
-								refreshing = true;
-								window.location.reload();
-							}
-						});
-
-						// If stuck in "installed" state (waiting), send skipWaiting
-						if (registration.waiting) {
-							registration.waiting.postMessage({ type: "SKIP_WAITING" });
-						}
-					}
-				});
-			});
-		} catch (error) {
-			console.error("Service Worker registration failed:", error);
-		}
-	}
 }
 
 // =========================================
