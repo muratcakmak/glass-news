@@ -197,7 +197,7 @@ const elements = {
 	modalReadTime: document.getElementById("modalReadTime"),
 	modalImage: document.getElementById("modalImage"),
 	modalTags: document.getElementById("modalTags"),
-	modalContent: document.getElementById("modalContent"),
+	modalContent: document.getElementById("modalMainContent"),
 	modalSourceLink: document.getElementById("modalSourceLink"),
 	modalShare: document.getElementById("modalShare"),
 	// Search elements
