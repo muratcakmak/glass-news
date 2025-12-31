@@ -80,6 +80,7 @@ Respond with a JSON object containing:
 export async function transformContent(
 	article: NewsArticle,
 	env: Env,
+	customPrompt?: string,
 ): Promise<NewsArticle> {
 	console.log(
 		`[Transform] Starting transformation for ${article.id} (${article.source})`,
@@ -113,35 +114,46 @@ export async function transformContent(
 			};
 		}
 
-		let selectedPrompt = DIRECT_STYLE_PROMPT;
-		let styleName = "direct";
+		let selectedPrompt: string;
+		let styleName = "custom";
 
-		const style = env.PROMPT_STYLE || "random"; // Default to random if not set
+		// Use custom prompt if provided
+		if (customPrompt) {
+			selectedPrompt = customPrompt;
+			styleName = "custom";
+			console.log(`[Transform] Using custom prompt for ${article.id}`);
+		} else {
+			// Use environment-based prompt selection
+			const style = env.PROMPT_STYLE || "random"; // Default to random if not set
 
-		if (style === "pamuk") {
-			selectedPrompt = ORHAN_PAMUK_PROMPT;
-			styleName = "pamuk";
-		} else if (style === "direct") {
-			selectedPrompt = DIRECT_STYLE_PROMPT;
-			styleName = "direct";
-		} else if (style === "greentext") {
-			selectedPrompt = GREENTEXT_PROMPT;
-			styleName = "greentext";
-		} else if (style === "random") {
-			// Randomly select one
-			const styles = [
-				{ name: "pamuk", prompt: ORHAN_PAMUK_PROMPT },
-				{ name: "direct", prompt: DIRECT_STYLE_PROMPT },
-				{ name: "greentext", prompt: GREENTEXT_PROMPT },
-			];
-			const randomStyle = styles[Math.floor(Math.random() * styles.length)];
-			// @ts-ignore - Random select will always return a valid style
-			selectedPrompt = randomStyle.prompt;
-			// @ts-ignore
-			styleName = randomStyle.name;
+			if (style === "pamuk") {
+				selectedPrompt = ORHAN_PAMUK_PROMPT;
+				styleName = "pamuk";
+			} else if (style === "direct") {
+				selectedPrompt = DIRECT_STYLE_PROMPT;
+				styleName = "direct";
+			} else if (style === "greentext") {
+				selectedPrompt = GREENTEXT_PROMPT;
+				styleName = "greentext";
+			} else if (style === "random") {
+				// Randomly select one
+				const styles = [
+					{ name: "pamuk", prompt: ORHAN_PAMUK_PROMPT },
+					{ name: "direct", prompt: DIRECT_STYLE_PROMPT },
+					{ name: "greentext", prompt: GREENTEXT_PROMPT },
+				];
+				const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+				// @ts-ignore - Random select will always return a valid style
+				selectedPrompt = randomStyle.prompt;
+				// @ts-ignore
+				styleName = randomStyle.name;
+			} else {
+				selectedPrompt = DIRECT_STYLE_PROMPT;
+				styleName = "direct";
+			}
+
+			console.log(`[Transform] Using prompt style: ${styleName}`);
 		}
-
-		console.log(`[Transform] Using prompt style: ${styleName}`);
 
 		const prompt = selectedPrompt
 			.replace("{title}", article.originalTitle)

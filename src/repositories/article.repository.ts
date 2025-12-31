@@ -1,4 +1,4 @@
-import type { NewsArticle, Env } from "../types";
+import type { NewsArticle, ArticleVariant, TransformVariant, Env } from "../types";
 import { generateThumbnail } from "../transformers/thumbnail";
 import { THUMBNAIL_CACHE_CONTROL } from "../config/constants";
 
@@ -195,6 +195,101 @@ export class ArticleRepository {
 		await env.NEWS_BUCKET.delete(`thumbnails/${articleId}.jpg`);
 
 		console.log(`[ArticleRepo] Deleted article ${articleId}`);
+	}
+
+	/**
+	 * Save article variant to R2
+	 * Storage path: articles/{source}/{articleId}/variants/{variant}.json
+	 */
+	async saveVariant(variant: ArticleVariant, env: Env): Promise<ArticleVariant> {
+		try {
+			const variantKey = `articles/${variant.source}/${variant.articleId}/variants/${variant.variant}.json`;
+
+			await env.NEWS_BUCKET.put(
+				variantKey,
+				JSON.stringify(variant, null, 2),
+				{
+					httpMetadata: {
+						contentType: "application/json",
+					},
+					customMetadata: {
+						articleId: variant.articleId,
+						source: variant.source,
+						variant: variant.variant,
+						transformedAt: variant.metadata.transformedAt,
+					},
+				}
+			);
+
+			console.log(`[ArticleRepo] Saved variant ${variant.variant} for ${variant.articleId}`);
+			return variant;
+		} catch (error) {
+			console.error(`[ArticleRepo] Error saving variant:`, error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get article variant from R2
+	 */
+	async getVariant(
+		articleId: string,
+		source: string,
+		variant: TransformVariant,
+		env: Env
+	): Promise<ArticleVariant | null> {
+		try {
+			const variantKey = `articles/${source}/${articleId}/variants/${variant}.json`;
+			const object = await env.NEWS_BUCKET.get(variantKey);
+
+			if (!object) {
+				return null;
+			}
+
+			const text = await object.text();
+			return JSON.parse(text) as ArticleVariant;
+		} catch (error) {
+			console.error(`[ArticleRepo] Error getting variant:`, error);
+			return null;
+		}
+	}
+
+	/**
+	 * List all variants for an article
+	 */
+	async listVariants(
+		articleId: string,
+		source: string,
+		env: Env
+	): Promise<TransformVariant[]> {
+		try {
+			const prefix = `articles/${source}/${articleId}/variants/`;
+			const list = await env.NEWS_BUCKET.list({ prefix });
+
+			return list.objects
+				.map((obj) => {
+					const filename = obj.key.split("/").pop();
+					return filename?.replace(".json", "") as TransformVariant;
+				})
+				.filter(Boolean);
+		} catch (error) {
+			console.error(`[ArticleRepo] Error listing variants:`, error);
+			return [];
+		}
+	}
+
+	/**
+	 * Delete a specific variant
+	 */
+	async deleteVariant(
+		articleId: string,
+		source: string,
+		variant: TransformVariant,
+		env: Env
+	): Promise<void> {
+		const variantKey = `articles/${source}/${articleId}/variants/${variant}.json`;
+		await env.NEWS_BUCKET.delete(variantKey);
+		console.log(`[ArticleRepo] Deleted variant ${variant} for ${articleId}`);
 	}
 }
 
