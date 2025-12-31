@@ -1,9 +1,10 @@
-import { fromHono } from "chanfana";
 import { Hono } from "hono";
+import { swaggerUI } from "@hono/swagger-ui";
 import type { Env } from "./types";
 import { registerAllProviders } from "./providers";
 import { corsMiddleware, errorHandler, requestLogger } from "./middleware";
 import { scheduledHandler } from "./handlers/scheduled.handler";
+import { openApiSpec } from "./config/openapi";
 
 // Import routes
 import articlesRoutes from "./routes/articles.routes";
@@ -22,6 +23,10 @@ app.use("*", requestLogger);
 app.use("*", corsMiddleware);
 app.use("*", errorHandler);
 
+// OpenAPI endpoints
+app.get("/openapi.json", (c) => c.json(openApiSpec));
+app.get("/docs", swaggerUI({ url: "/openapi.json" }));
+
 // Mount routes
 app.route("/api/articles", articlesRoutes);
 app.route("/api/subscriptions", subscriptionsRoutes);
@@ -37,27 +42,7 @@ app.post("/api/clean", (c) => c.redirect("/api/admin/clean", 307));
 app.post("/api/test-push", (c) => c.redirect("/api/subscriptions/test", 307));
 app.get("/api/debug-subs", (c) => c.redirect("/api/subscriptions/count", 301));
 
-// Add OpenAPI documentation with chanfana
-const openapi = fromHono(app, {
-	docs_url: "/docs",
-	redoc_url: "/redoc",
-	openapi_url: "/openapi.json",
-	schema: {
-		info: {
-			title: "News Data API",
-			version: "3.0.0",
-			description: "Modular news aggregation API with AI-powered article transformation variants",
-		},
-		servers: [
-			{
-				url: "https://news-data.omc345.workers.dev",
-				description: "Production server",
-			},
-		],
-	},
-});
-
 export default {
-	fetch: openapi.fetch,
+	fetch: app.fetch,
 	scheduled: scheduledHandler,
 };
