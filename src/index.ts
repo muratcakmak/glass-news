@@ -2,7 +2,13 @@ import { Hono } from "hono";
 import { swaggerUI } from "@hono/swagger-ui";
 import type { Env } from "./types";
 import { registerAllProviders } from "./providers";
-import { corsMiddleware, errorHandler, requestLogger } from "./middleware";
+import {
+	corsMiddleware,
+	errorHandler,
+	requestLogger,
+	securityHeaders,
+	bodySizeLimit,
+} from "./middleware";
 import { scheduledHandler } from "./handlers/scheduled.handler";
 import { openApiSpec } from "./config/openapi";
 
@@ -18,9 +24,11 @@ registerAllProviders();
 // Create Hono app
 const app = new Hono<{ Bindings: Env }>();
 
-// Global middleware
+// Global middleware (order matters!)
 app.use("*", requestLogger);
+app.use("*", securityHeaders); // Add security headers to all responses
 app.use("*", corsMiddleware);
+app.use("*", bodySizeLimit(2 * 1024 * 1024)); // 2MB max request size
 app.use("*", errorHandler);
 
 // OpenAPI endpoints

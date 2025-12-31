@@ -3,8 +3,12 @@ import type { Env, TransformVariant } from "../types";
 import { articleService, transformService } from "../services";
 import { DEFAULT_ARTICLE_LIMIT } from "../config/constants";
 import { SOURCE_MAP } from "../config/constants";
+import { readRateLimit } from "../middleware";
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Apply rate limiting to all article routes
+app.use("*", readRateLimit());
 
 /**
  * GET /api/articles

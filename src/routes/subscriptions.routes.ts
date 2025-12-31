@@ -1,8 +1,12 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { pushService } from "../services";
+import { publicRateLimit } from "../middleware";
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Apply rate limiting to subscription routes
+app.use("*", publicRateLimit());
 
 /**
  * POST /api/subscriptions

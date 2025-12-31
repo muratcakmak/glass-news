@@ -2,8 +2,17 @@ import { Hono } from "hono";
 import type { Env, TransformVariant } from "../types";
 import { crawlService, articleService, pushService, transformService } from "../services";
 import { indexRepository } from "../repositories";
+import { adminRateLimit, transformRateLimit, requireAuth } from "../middleware";
 
 const app = new Hono<{ Bindings: Env }>();
+
+// SECURITY: Require authentication for all admin endpoints
+// Set ADMIN_API_KEY secret: wrangler secret put ADMIN_API_KEY
+// Then use: Authorization: Bearer <your-api-key>
+app.use("*", requireAuth);
+
+// Apply rate limiting after authentication
+app.use("*", adminRateLimit());
 
 /**
  * POST /api/admin/crawl
@@ -150,7 +159,7 @@ app.get("/providers", async (c) => {
  * - variant: Transformation variant (default | technical | casual | formal | brief)
  * - variants: Array of variants to generate multiple transformations
  */
-app.post("/transform", async (c) => {
+app.post("/transform", transformRateLimit(), async (c) => {
 	try {
 		const body = await c.req.json<{
 			articleId?: string;
