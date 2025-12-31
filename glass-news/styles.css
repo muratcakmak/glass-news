@@ -35,8 +35,7 @@
 	--error: #ff453a;
 
 	/* Typography */
-	--font-display:
-		"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+	--font-display: "Instrument Serif", Georgia, serif;
 	--font-body:
 		"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, system-ui,
 		sans-serif;
