@@ -3,24 +3,90 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Glass News</title>
-  
+
+  <!-- Primary Meta Tags -->
+  <title>Glass News - AI-Powered News with Beautiful Glassmorphism UI</title>
+  <meta name="title" content="Glass News - AI-Powered News with Beautiful Glassmorphism UI">
+  <meta name="description" content="Discover curated tech news, world events, and Turkish news translated to English. Powered by AI with a stunning glassmorphism interface. HackerNews, Wikipedia, Reddit & more.">
+  <meta name="keywords" content="glass news, AI news, tech news, world news, turkish news, hackernews, wikipedia, reddit, news aggregator, glassmorphism, PWA">
+  <meta name="author" content="Glass News">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <link rel="canonical" href="https://glass-news.pages.dev/">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://glass-news.pages.dev/">
+  <meta property="og:site_name" content="Glass News">
+  <meta property="og:title" content="Glass News - AI-Powered News with Beautiful Glassmorphism UI">
+  <meta property="og:description" content="Discover curated tech news, world events, and Turkish news translated to English. Powered by AI with a stunning glassmorphism interface.">
+  <meta property="og:image" content="https://glass-news.pages.dev/icons/icon-512.svg">
+  <meta property="og:image:secure_url" content="https://glass-news.pages.dev/icons/icon-512.svg">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Glass News - Beautiful AI-powered news aggregation">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://glass-news.pages.dev/">
+  <meta name="twitter:title" content="Glass News - AI-Powered News">
+  <meta name="twitter:description" content="Discover curated tech news, world events, and Turkish news translated to English. Beautiful glassmorphism UI.">
+  <meta name="twitter:image" content="https://glass-news.pages.dev/icons/icon-512.svg">
+  <meta name="twitter:image:alt" content="Glass News - AI-powered news aggregation">
+  <meta name="twitter:creator" content="@glassnews">
+  <meta name="twitter:site" content="@glassnews">
+
   <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0a0a0f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Glass News">
-  
+
   <!-- Icons -->
   <link rel="icon" type="image/png" href="icons/favicon.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  
-  <!-- Fonts -->
+
+  <!-- Preconnect for Performance -->
+  <link rel="preconnect" href="https://news-data.omc345.workers.dev">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://images.unsplash.com">
+
+  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Glass News",
+    "description": "AI-powered news aggregation with beautiful glassmorphism UI. Curated tech news, world events, and Turkish news translated to English.",
+    "url": "https://glass-news.pages.dev",
+    "image": "https://glass-news.pages.dev/icons/icon-512.svg",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Glass News",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://glass-news.pages.dev/icons/icon-512.png",
+        "width": 512,
+        "height": 512
+      }
+    },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://glass-news.pages.dev/?search={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="dark-theme">
@@ -41,7 +107,7 @@
   <!-- Navigation -->
   <nav class="navbar">
     <div class="navbar-inner">
-      <a href="/" class="navbar-brand">Glass News <span class="navbar-version app-version" style="font-size: 0.6em; opacity: 0.5; font-weight: 400; margin-left: 4px;">v2.2.9</span></a>
+      <a href="/" class="navbar-brand">Glass News <span class="navbar-version app-version" style="font-size: 0.6em; opacity: 0.5; font-weight: 400; margin-left: 4px;">v2.3.0</span></a>
       <div class="navbar-actions">
         <button class="btn btn-primary btn-sm" id="navInstallBtn" style="display: none; padding: 4px 12px; font-size: 0.8em; border-radius: 20px;">Install App</button>
         <button class="btn btn-icon" id="notificationBtn" aria-label="Notifications">

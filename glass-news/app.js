@@ -8,7 +8,7 @@
 // =========================================
 
 const API_URL = "https://news-data.omc345.workers.dev";
-const APP_VERSION = "2.2.9";
+const APP_VERSION = "2.3.0";
 const VAPID_PUBLIC_KEY =
 	"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM";
 ("BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLcLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM");
@@ -334,46 +334,98 @@ const ROUTER = {
 const SEO = {
 	update(article) {
 		// 1. Update Title
-		document.title = `${article.title} - v${VERSION_INFO.version}`;
+		document.title = `${article.title} | Glass News`;
 
-		// 2. Update Meta Tags
+		// 2. Update Primary Meta Tags
 		this.setMeta("description", article.excerpt);
+		this.setMeta("keywords", article.tags ? article.tags.join(", ") : "");
+
+		// 3. Open Graph Meta Tags
+		this.setMeta("og:type", "article");
+		this.setMeta("og:site_name", "Glass News");
 		this.setMeta("og:title", article.title);
 		this.setMeta("og:description", article.excerpt);
-		this.setMeta("og:image", article.image);
 		this.setMeta("og:url", window.location.href);
-		this.setMeta("twitter:card", "summary_large_image");
+		this.setMeta("og:image", article.image);
+		this.setMeta("og:image:secure_url", article.image);
+		this.setMeta("og:image:width", "1200");
+		this.setMeta("og:image:height", "630");
+		this.setMeta("og:image:alt", article.title);
+		this.setMeta("og:locale", "en_US");
 
-		// 3. Update Canonical
+		// 4. Article-specific Open Graph
+		this.setMeta("article:published_time", new Date().toISOString());
+		this.setMeta("article:author", article.author || "Glass News Editor");
+		this.setMeta("article:section", article.category);
+		if (article.tags && article.tags.length > 0) {
+			// Note: Multiple tags require special handling
+			article.tags.slice(0, 5).forEach(tag => {
+				this.addMetaTag("article:tag", tag);
+			});
+		}
+
+		// 5. Twitter Card Meta Tags
+		this.setMeta("twitter:card", "summary_large_image");
+		this.setMeta("twitter:site", "@glassnews");
+		this.setMeta("twitter:creator", "@glassnews");
+		this.setMeta("twitter:title", article.title);
+		this.setMeta("twitter:description", article.excerpt);
+		this.setMeta("twitter:image", article.image);
+		this.setMeta("twitter:image:alt", article.title);
+		this.setMeta("twitter:label1", "Reading time");
+		this.setMeta("twitter:data1", article.readTime);
+		this.setMeta("twitter:label2", "Category");
+		this.setMeta("twitter:data2", article.category);
+
+		// 6. Update Canonical
 		const link =
 			document.querySelector("link[rel='canonical']") ||
 			document.createElement("link");
 		link.rel = "canonical";
 		link.href = window.location.href;
-		document.head.appendChild(link);
+		if (!link.parentElement) {
+			document.head.appendChild(link);
+		}
 
-		// 4. Inject JSON-LD Schema
+		// 7. Inject Rich JSON-LD Schema
 		this.injectSchema({
 			"@context": "https://schema.org",
 			"@type": "NewsArticle",
-			headline: article.title,
-			image: [article.image],
-			datePublished: new Date().toISOString(), // In real app, use article.date
-			author: [
-				{
-					"@type": "Person",
-					name: article.author || "Glass News Editor",
-				},
-			],
-			publisher: {
-				"@type": "Organization",
-				name: "Glass News",
-				logo: {
-					"@type": "ImageObject",
-					url: `${window.location.origin}/icons/icon-512.png`,
-				},
+			"headline": article.title,
+			"image": {
+				"@type": "ImageObject",
+				"url": article.image,
+				"width": 1200,
+				"height": 630
 			},
-			description: article.excerpt,
+			"datePublished": new Date().toISOString(),
+			"dateModified": new Date().toISOString(),
+			"author": {
+				"@type": "Person",
+				"name": article.author || "Glass News Editor",
+				"url": "https://glass-news.pages.dev"
+			},
+			"publisher": {
+				"@type": "Organization",
+				"name": "Glass News",
+				"logo": {
+					"@type": "ImageObject",
+					"url": `${window.location.origin}/icons/icon-512.png`,
+					"width": 512,
+					"height": 512
+				}
+			},
+			"description": article.excerpt,
+			"articleBody": article.fullContent,
+			"keywords": article.tags ? article.tags.join(", ") : "",
+			"articleSection": article.category,
+			"isAccessibleForFree": "true",
+			"mainEntityOfPage": {
+				"@type": "WebPage",
+				"@id": window.location.href
+			},
+			"url": window.location.href,
+			"inLanguage": "en-US"
 		});
 	},
 
@@ -396,7 +448,7 @@ const SEO = {
 
 		if (!element) {
 			element = document.createElement("meta");
-			if (name.startsWith("og:")) {
+			if (name.startsWith("og:") || name.startsWith("article:")) {
 				element.setAttribute("property", name);
 			} else {
 				element.setAttribute("name", name);
@@ -404,6 +456,18 @@ const SEO = {
 			document.head.appendChild(element);
 		}
 		element.setAttribute("content", content);
+	},
+
+	addMetaTag(name, content) {
+		// Create a new meta tag (for multiple values like article:tag)
+		const element = document.createElement("meta");
+		if (name.startsWith("og:") || name.startsWith("article:")) {
+			element.setAttribute("property", name);
+		} else {
+			element.setAttribute("name", name);
+		}
+		element.setAttribute("content", content);
+		document.head.appendChild(element);
 	},
 
 	injectSchema(data) {

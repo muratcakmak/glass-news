@@ -1,0 +1,15 @@
+# Glass News - Robots.txt
+# Allow all crawlers to index the site
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://glass-news.pages.dev/sitemap.xml
+
+# Crawl delay (optional, good for rate limiting)
+Crawl-delay: 1
+
+# Disallow admin or internal paths (if any in future)
+# Disallow: /admin/
+# Disallow: /api/
