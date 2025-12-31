@@ -25,11 +25,26 @@ export async function securityHeaders(c: Context, next: Next) {
 		"geolocation=(), microphone=(), camera=(), payment=()"
 	);
 
-	// Content Security Policy for JSON API
-	c.header(
-		"Content-Security-Policy",
-		"default-src 'none'; frame-ancestors 'none'"
-	);
+	// Content Security Policy - Relaxed for Swagger UI, strict for API
+	const path = c.req.path;
+	if (path === "/docs" || path === "/openapi.json") {
+		// Allow Swagger UI to load from CDN
+		c.header(
+			"Content-Security-Policy",
+			"default-src 'self'; " +
+			"script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+			"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+			"img-src 'self' data: https://cdn.jsdelivr.net; " +
+			"font-src 'self' https://cdn.jsdelivr.net; " +
+			"frame-ancestors 'none'"
+		);
+	} else {
+		// Strict CSP for API endpoints
+		c.header(
+			"Content-Security-Policy",
+			"default-src 'none'; frame-ancestors 'none'"
+		);
+	}
 
 	// Strict Transport Security (HSTS) - force HTTPS
 	c.header(

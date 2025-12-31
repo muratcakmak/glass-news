@@ -51,7 +51,7 @@ export class ArticleService {
 
 		try {
 			// Transform content
-			const transformed = await transformContent(article, env);
+			const transformed = await transformContent(article, env, {});
 
 			// Save to R2
 			const saved = await articleRepository.save(transformed, env);

@@ -23,12 +23,16 @@ export class TransformService {
 	async transformArticle(
 		article: NewsArticle,
 		variant: Exclude<TransformVariant, "raw">,
-		env: Env
+		env: Env,
+		style?: "pamuk" | "direct" | "greentext" | "random"
 	): Promise<ArticleVariant> {
-		console.log(`[TransformService] Transforming ${article.id} with variant: ${variant}`);
+		console.log(`[TransformService] Transforming ${article.id} with variant: ${variant}, style: ${style || 'default'}`);
 
-		// Transform the content using the variant-specific prompt
-		const transformed = await transformContent(article, env, VARIANT_PROMPTS[variant]);
+		// Transform the content using the variant-specific prompt and optional style
+		const transformed = await transformContent(article, env, {
+			customPrompt: VARIANT_PROMPTS[variant],
+			style
+		});
 
 		// Create the variant object
 		const articleVariant: ArticleVariant = {
@@ -60,13 +64,14 @@ export class TransformService {
 	async transformMultipleVariants(
 		article: NewsArticle,
 		variants: Exclude<TransformVariant, "raw">[],
-		env: Env
+		env: Env,
+		style?: "pamuk" | "direct" | "greentext" | "random"
 	): Promise<ArticleVariant[]> {
 		const results: ArticleVariant[] = [];
 
 		for (const variant of variants) {
 			try {
-				const transformed = await this.transformArticle(article, variant, env);
+				const transformed = await this.transformArticle(article, variant, env, style);
 				results.push(transformed);
 			} catch (error) {
 				console.error(

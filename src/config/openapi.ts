@@ -171,10 +171,85 @@ export const openApiSpec = {
 				},
 			},
 		},
+		"/api/admin/process": {
+			post: {
+				summary: "Process articles (Orchestration)",
+				description: "Full pipeline: Crawl → Transform → Generate Images → Update KV. This is the main endpoint for production workflows.",
+				security: [{ bearerAuth: [] }],
+				requestBody: {
+					required: true,
+					content: {
+						"application/json": {
+							schema: {
+								type: "object",
+								properties: {
+									sources: {
+										type: "array",
+										items: { type: "string" },
+										description: "Array of source names",
+										example: ["eksisozluk"],
+									},
+									count: {
+										type: "integer",
+										description: "Number of articles per source",
+										default: 5,
+										example: 2,
+									},
+									transform: {
+										type: "boolean",
+										description: "Whether to apply AI text transformation",
+										default: true,
+									},
+									generateImage: {
+										type: "boolean",
+										description: "Whether to generate images/thumbnails",
+										default: true,
+									},
+									style: {
+										type: "string",
+										enum: ["pamuk", "direct", "greentext", "random"],
+										description: "Writing style for transformation",
+										example: "greentext",
+									},
+								},
+								example: {
+									sources: ["eksisozluk"],
+									count: 2,
+									transform: true,
+									generateImage: true,
+									style: "greentext",
+								},
+							},
+						},
+					},
+				},
+				responses: {
+					"200": {
+						description: "Processing completed successfully",
+						content: {
+							"application/json": {
+								schema: {
+									type: "object",
+									properties: {
+										success: { type: "boolean" },
+										count: { type: "integer" },
+										transformed: { type: "boolean" },
+										imagesGenerated: { type: "boolean" },
+										style: { type: "string" },
+										articles: { type: "array" },
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 		"/api/admin/crawl": {
 			post: {
 				summary: "Crawl articles",
-				description: "Manually trigger article crawling from news sources",
+				description: "Crawl articles and save raw data (no processing). Use /api/admin/process for full pipeline.",
+				security: [{ bearerAuth: [] }],
 				requestBody: {
 					required: true,
 					content: {
@@ -196,7 +271,12 @@ export const openApiSpec = {
 									},
 									transform: {
 										type: "boolean",
-										description: "Whether to apply AI transformation",
+										description: "Whether to apply AI text transformation",
+										default: false,
+									},
+									generateImage: {
+										type: "boolean",
+										description: "Whether to generate images/thumbnails",
 										default: false,
 									},
 									variant: {
@@ -215,6 +295,7 @@ export const openApiSpec = {
 									sources: ["hackernews"],
 									count: 2,
 									transform: false,
+									generateImage: false,
 								},
 							},
 						},
@@ -246,6 +327,7 @@ export const openApiSpec = {
 			post: {
 				summary: "Transform articles",
 				description: "Apply AI transformation to existing articles with specific variant styles",
+				security: [{ bearerAuth: [] }],
 				requestBody: {
 					required: true,
 					content: {
@@ -296,10 +378,84 @@ export const openApiSpec = {
 				},
 			},
 		},
+		"/api/admin/generate-image": {
+			post: {
+				summary: "Generate images",
+				description: "Generate images/thumbnails for existing articles",
+				security: [{ bearerAuth: [] }],
+				requestBody: {
+					required: true,
+					content: {
+						"application/json": {
+							schema: {
+								type: "object",
+								oneOf: [
+									{
+										description: "Generate image for single article",
+										properties: {
+											articleId: { type: "string", example: "hackernews-46446815" },
+										},
+										example: {
+											articleId: "hackernews-46446815",
+										},
+									},
+									{
+										description: "Generate images for multiple articles",
+										properties: {
+											articleIds: {
+												type: "array",
+												items: { type: "string" },
+												example: ["hackernews-46446815", "hackernews-46446820"],
+											},
+										},
+									},
+									{
+										description: "Batch generate images by source",
+										properties: {
+											source: { type: "string", example: "hackernews" },
+											limit: { type: "integer", default: 10 },
+										},
+									},
+								],
+							},
+						},
+					},
+				},
+				responses: {
+					"200": {
+						description: "Image generation successful",
+						content: {
+							"application/json": {
+								schema: {
+									type: "object",
+									properties: {
+										success: { type: "boolean" },
+										count: { type: "integer" },
+										results: {
+											type: "array",
+											items: {
+												type: "object",
+												properties: {
+													articleId: { type: "string" },
+													success: { type: "boolean" },
+													thumbnailUrl: { type: "string" },
+													error: { type: "string" },
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 		"/api/admin/clean": {
 			post: {
 				summary: "Clean storage",
 				description: "Clear KV indexes (articles remain in R2)",
+				security: [{ bearerAuth: [] }],
 				responses: {
 					"200": {
 						description: "Storage cleaned successfully",
@@ -311,6 +467,7 @@ export const openApiSpec = {
 			get: {
 				summary: "List providers",
 				description: "Get all available and enabled news providers",
+				security: [{ bearerAuth: [] }],
 				responses: {
 					"200": {
 						description: "List of providers",
@@ -384,6 +541,16 @@ export const openApiSpec = {
 						description: "Test notifications sent",
 					},
 				},
+			},
+		},
+	},
+	components: {
+		securitySchemes: {
+			bearerAuth: {
+				type: "http",
+				scheme: "bearer",
+				bearerFormat: "API Key",
+				description: "Enter your admin API key (set via wrangler secret put ADMIN_API_KEY)",
 			},
 		},
 	},

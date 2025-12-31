@@ -13,6 +13,10 @@ export interface Env {
 	GEMINI_API_KEY?: string;
 	RESEARCH_MODEL?: string;
 
+	// Image generation
+	ENABLE_AI_IMAGES?: string; // "true" to enable AI image generation (costs money), "false" for free alternatives
+	UNSPLASH_API_KEY?: string; // Free tier: 50 requests/hour
+
 	// News sources API keys
 	REDDIT_CLIENT_ID?: string;
 	REDDIT_CLIENT_SECRET?: string;

@@ -23,12 +23,15 @@ crons = ["0 */4 * * *"]
 [vars]
 # Environment variables (non-sensitive)
 RESEARCH_MODEL = "x-ai/grok-4.1-fast"
-PROMPT_STYLE = "random"
+PROMPT_STYLE = "greentext"
+
+# Image generation: "false" = free services (DiceBear, Unsplash), "true" = AI (costs money)
+ENABLE_AI_IMAGES = "false"
 
 # Secrets (set via: bunx wrangler secret put SECRET_NAME)
 # OPENROUTER_API_KEY - For Grok AI content transformation
-# GEMINI_API_KEY - For Gemini 2.5 Flash image generation
-# OPENAI_API_KEY - For DALL-E image generation (Legacy)
+# GEMINI_API_KEY - For Gemini 2.5 Flash image generation (only if ENABLE_AI_IMAGES=true)
+# UNSPLASH_API_KEY - (Optional) For better free images (50/hour limit)
 # REDDIT_CLIENT_ID
 # REDDIT_CLIENT_SECRET
 # SCRAPEDO_API_KEY (if needed for scraping)

@@ -80,7 +80,10 @@ Respond with a JSON object containing:
 export async function transformContent(
 	article: NewsArticle,
 	env: Env,
-	customPrompt?: string,
+	options?: {
+		customPrompt?: string;
+		style?: "pamuk" | "direct" | "greentext" | "random";
+	}
 ): Promise<NewsArticle> {
 	console.log(
 		`[Transform] Starting transformation for ${article.id} (${article.source})`,
@@ -118,13 +121,13 @@ export async function transformContent(
 		let styleName = "custom";
 
 		// Use custom prompt if provided
-		if (customPrompt) {
-			selectedPrompt = customPrompt;
+		if (options?.customPrompt) {
+			selectedPrompt = options.customPrompt;
 			styleName = "custom";
 			console.log(`[Transform] Using custom prompt for ${article.id}`);
 		} else {
-			// Use environment-based prompt selection
-			const style = env.PROMPT_STYLE || "random"; // Default to random if not set
+			// Use style from options, or fallback to environment
+			const style = options?.style || env.PROMPT_STYLE || "random";
 
 			if (style === "pamuk") {
 				selectedPrompt = ORHAN_PAMUK_PROMPT;

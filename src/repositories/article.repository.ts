@@ -7,46 +7,52 @@ import { THUMBNAIL_CACHE_CONTROL } from "../config/constants";
  */
 export class ArticleRepository {
 	/**
-	 * Save an article to R2 with thumbnail generation
+	 * Save an article to R2 with optional thumbnail generation
+	 * @param article - The article to save
+	 * @param env - Environment bindings
+	 * @param options - Save options (generateThumbnail: whether to auto-generate thumbnail, default: false)
 	 */
-	async save(article: NewsArticle, env: Env): Promise<NewsArticle> {
+	async save(article: NewsArticle, env: Env, options?: { generateThumbnail?: boolean }): Promise<NewsArticle> {
 		try {
-			// Generate and upload thumbnail
-			console.log(
-				`[ArticleRepo] Generating thumbnail for ${article.id}...`
-			);
-			const thumbnail = await generateThumbnail(article, env);
-			let thumbnailUrl = "";
+			let thumbnailUrl = article.thumbnailUrl || "";
 
-			if (thumbnail) {
+			// Only auto-generate thumbnail if explicitly requested
+			if (options?.generateThumbnail) {
 				console.log(
-					`[ArticleRepo] Generated thumbnail - Size: ${thumbnail.size} bytes, Type: ${thumbnail.type}`
+					`[ArticleRepo] Generating thumbnail for ${article.id}...`
 				);
+				const thumbnail = await generateThumbnail(article, env);
 
-				const extension = thumbnail.type.includes("png") ? "png" : "jpg";
-				const thumbnailKey = `thumbnails/${article.id}.${extension}`;
-
-				try {
-					await env.NEWS_BUCKET.put(thumbnailKey, thumbnail, {
-						httpMetadata: {
-							contentType: thumbnail.type || "image/png",
-							cacheControl: THUMBNAIL_CACHE_CONTROL,
-						},
-					});
-					thumbnailUrl = `/thumbnails/${article.id}.${extension}`;
+				if (thumbnail) {
 					console.log(
-						`[ArticleRepo] Successfully uploaded thumbnail to ${thumbnailKey}`
+						`[ArticleRepo] Generated thumbnail - Size: ${thumbnail.size} bytes, Type: ${thumbnail.type}`
 					);
-				} catch (uploadError) {
-					console.error(
-						`[ArticleRepo] Failed to upload thumbnail for ${article.id}:`,
-						uploadError
+
+					const extension = thumbnail.type.includes("png") ? "png" : "jpg";
+					const thumbnailKey = `thumbnails/${article.id}.${extension}`;
+
+					try {
+						await env.NEWS_BUCKET.put(thumbnailKey, thumbnail, {
+							httpMetadata: {
+								contentType: thumbnail.type || "image/png",
+								cacheControl: THUMBNAIL_CACHE_CONTROL,
+							},
+						});
+						thumbnailUrl = `/thumbnails/${article.id}.${extension}`;
+						console.log(
+							`[ArticleRepo] Successfully uploaded thumbnail to ${thumbnailKey}`
+						);
+					} catch (uploadError) {
+						console.error(
+							`[ArticleRepo] Failed to upload thumbnail for ${article.id}:`,
+							uploadError
+						);
+					}
+				} else {
+					console.log(
+						`[ArticleRepo] Thumbnail generation failed or returned null`
 					);
 				}
-			} else {
-				console.log(
-					`[ArticleRepo] Thumbnail generation failed or returned null`
-				);
 			}
 
 			// Save article with thumbnail URL
