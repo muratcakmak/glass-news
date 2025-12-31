@@ -18,11 +18,12 @@ id = "a1c6716fe6f54f6eae4783d0ed8def14"
 # SF Time: 10 PM - 7 AM PST (06:00 - 15:00 UTC) for Turkish sources
 
 [triggers]
-crons = ["0 */2 * * *"]
+crons = ["0 */4 * * *"]
 
 [vars]
 # Environment variables (non-sensitive)
 RESEARCH_MODEL = "x-ai/grok-4.1-fast"
+PROMPT_STYLE = "random"
 
 # Secrets (set via: bunx wrangler secret put SECRET_NAME)
 # OPENROUTER_API_KEY - For Grok AI content transformation

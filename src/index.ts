@@ -143,7 +143,7 @@ export default {
 			console.log("Crawling HackerNews...");
 			try {
 				const hnArticles = await crawlHackerNews();
-				const limitedHN = hnArticles.slice(0, 2);
+				const limitedHN = hnArticles.slice(0, 1);
 
 				// Fetch comments for HN
 				for (const article of limitedHN) {
@@ -163,7 +163,7 @@ export default {
 			console.log("Crawling T24...");
 			try {
 				const t24Articles = await crawlT24(env);
-				const limitedT24 = t24Articles.slice(0, 3);
+				const limitedT24 = t24Articles.slice(0, 1);
 
 				// Fetch full content for T24
 				for (const article of limitedT24) {
@@ -187,7 +187,7 @@ export default {
 			console.log("Crawling Eksisozluk...");
 			try {
 				const eksiArticles = await crawlEksisozluk(env);
-				const limitedEksi = eksiArticles.slice(0, 3);
+				const limitedEksi = eksiArticles.slice(0, 1);
 
 				// Fetch content for Eksi
 				for (const article of limitedEksi) {
@@ -233,54 +233,7 @@ export default {
 
 			// Send Push Notifications for new articles
 			if (processedArticles.length > 0) {
-				console.log("Sending push notifications...");
-
-				// Configure VAPID
-				webpush.setVapidDetails(
-					env.VAPID_SUBJECT,
-					"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM",
-					env.VAPID_PRIVATE_KEY,
-				);
-
-				try {
-					const { keys } = await env.NEWS_KV.list({ prefix: "sub:" });
-					console.log(`Found ${keys.length} subscriptions`);
-
-					// Create notification payload
-					const firstArticle = processedArticles[0];
-					const articleTitle =
-						firstArticle.transformedTitle || firstArticle.originalTitle;
-
-					const notification = {
-						title: "New Articles available",
-						body: `${processedArticles.length} new stories added. Top: ${articleTitle}`,
-						url: `/?article=${firstArticle.id}`,
-						icon: "/icons/icon-192.png",
-						badge: "/icons/badge-72.png",
-					};
-
-					const payload = JSON.stringify(notification);
-
-					for (const key of keys) {
-						try {
-							const subData = await env.NEWS_KV.get(key.name);
-							if (!subData) continue;
-
-							const subscription = JSON.parse(subData);
-							await webpush.sendNotification(subscription, payload);
-							console.log(`Push sent to ${key.name}`);
-						} catch (error: any) {
-							if (error.statusCode === 410) {
-								console.log(`Subscription expired: ${key.name}`);
-								await env.NEWS_KV.delete(key.name);
-							} else {
-								console.error(`Push failed for ${key.name}:`, error);
-							}
-						}
-					}
-				} catch (error) {
-					console.error("Error sending push notifications:", error);
-				}
+				await sendPushNotifications(processedArticles, env);
 			}
 		} catch (error) {
 			console.error("Error in scheduled task:", error);
@@ -507,6 +460,11 @@ async function handleManualCrawl(
 				}
 			}
 
+			// Send push notifications if sync processing was successful and we have articles
+			if (processedArticles.length > 0) {
+				ctx.waitUntil(sendPushNotifications(processedArticles, env));
+			}
+
 			return new Response(
 				JSON.stringify({
 					success: true,
@@ -637,15 +595,17 @@ async function handleTestPush(
 		console.log(`Sending test push: ${title} - ${message}`);
 
 		// Configure VAPID
-		webpush.setVapidDetails(
-			env.VAPID_SUBJECT,
-			"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM",
-			env.VAPID_PRIVATE_KEY,
-		);
+		const vapidKeys = {
+			subject: env.VAPID_SUBJECT,
+			publicKey:
+				"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM",
+			privateKey: env.VAPID_PRIVATE_KEY,
+		};
 
 		const { keys } = await env.NEWS_KV.list({ prefix: "sub:" });
 		let successCount = 0;
 		let failCount = 0;
+		const errors: any[] = [];
 
 		const payload = JSON.stringify({
 			title,
@@ -655,20 +615,71 @@ async function handleTestPush(
 			badge: "/icons/badge-72.png",
 		});
 
-		for (const key of keys) {
+		// Helper function for single push
+		const sendPush = async (key: { name: string }) => {
 			try {
 				const subData = await env.NEWS_KV.get(key.name);
-				if (!subData) continue;
+				if (!subData) return;
 
 				const subscription = JSON.parse(subData);
-				await webpush.sendNotification(subscription, payload);
-				successCount++;
+
+				// Use generateRequestDetails to avoid internal https.request
+				const options = {
+					vapidDetails: vapidKeys,
+					TTL: 60,
+				};
+
+				// web-push generateRequestDetails returns: { endpoint, method, headers, body }
+				// @ts-ignore - webpush types might be incomplete
+				const details = await webpush.generateRequestDetails(
+					subscription,
+					payload,
+					options,
+				);
+
+				const response = await fetch(details.endpoint, {
+					method: "POST",
+					headers: details.headers,
+					body: details.body,
+				});
+
+				if (!response.ok) {
+					if (response.status === 410 || response.status === 404) {
+						await env.NEWS_KV.delete(key.name);
+					}
+					throw new Error(
+						`Push service responded with ${response.status} ${await response.text()}`,
+					);
+				}
+
+				return true;
 			} catch (error: any) {
 				console.error(`Push failed for ${key.name}:`, error);
-				if (error.statusCode === 410) {
-					await env.NEWS_KV.delete(key.name);
+				return {
+					error: error.message || error.toString(),
+					key: key.name,
+					statusCode: error.statusCode,
+				}; // Return error object
+			}
+		};
+
+		// Run all pushes in parallel
+		const results = await Promise.allSettled(keys.map((key) => sendPush(key)));
+
+		// Process results
+		for (const result of results) {
+			if (result.status === "fulfilled") {
+				if (result.value === true) {
+					successCount++;
+				} else if (result.value) {
+					// It's an error object
+					failCount++;
+					errors.push(result.value);
 				}
+			} else {
+				// Should not happen as we catch inside sendPush, but just in case
 				failCount++;
+				errors.push({ error: "Promise rejected", reason: result.reason });
 			}
 		}
 
@@ -677,6 +688,7 @@ async function handleTestPush(
 				success: true,
 				sent: successCount,
 				failed: failCount,
+				errors,
 			}),
 			{
 				headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -688,5 +700,96 @@ async function handleTestPush(
 			status: 500,
 			headers: { ...corsHeaders, "Content-Type": "application/json" },
 		});
+	}
+}
+
+async function sendPushNotifications(
+	articles: NewsArticle[],
+	env: Env,
+): Promise<void> {
+	if (articles.length === 0) return;
+
+	console.log("Sending push notifications...");
+
+	// Configure VAPID
+	webpush.setVapidDetails(
+		env.VAPID_SUBJECT,
+		"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM",
+		env.VAPID_PRIVATE_KEY,
+	);
+
+	try {
+		const { keys } = await env.NEWS_KV.list({ prefix: "sub:" });
+		console.log(`Found ${keys.length} subscriptions`);
+
+		if (keys.length === 0) return;
+
+		// Create notification payload
+		const firstArticle = articles[0];
+		if (!firstArticle) return;
+
+		const articleTitle =
+			firstArticle.transformedTitle || firstArticle.originalTitle;
+
+		const notification = {
+			title: "New Articles available",
+			body: `${articles.length} new stories added. Top: ${articleTitle}`,
+			url: `/?article=${firstArticle.id}`,
+			icon: "/icons/icon-192.png",
+			badge: "/icons/badge-72.png",
+		};
+
+		const payload = JSON.stringify(notification);
+
+		// Helper to send single push
+		const sendPush = async (key: { name: string }) => {
+			try {
+				const subData = await env.NEWS_KV.get(key.name);
+				if (!subData) return;
+
+				const subscription = JSON.parse(subData);
+
+				const options = {
+					vapidDetails: {
+						subject: env.VAPID_SUBJECT,
+						publicKey:
+							"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM",
+						privateKey: env.VAPID_PRIVATE_KEY,
+					},
+					TTL: 60,
+				};
+
+				// @ts-ignore
+				const details = await webpush.generateRequestDetails(
+					subscription,
+					payload,
+					options,
+				);
+
+				const response = await fetch(details.endpoint, {
+					method: "POST",
+					headers: details.headers,
+					body: details.body,
+				});
+
+				if (!response.ok) {
+					if (response.status === 410) {
+						console.log(`Subscription expired (410): ${key.name}`);
+						await env.NEWS_KV.delete(key.name);
+					}
+					throw new Error(
+						`Push failed: ${response.status} ${await response.text()}`,
+					);
+				}
+				console.log(`Push sent to ${key.name}`);
+			} catch (error: any) {
+				console.error(`Push error for ${key.name}:`, error);
+			}
+		};
+
+		// Send all in parallel
+		await Promise.allSettled(keys.map((key) => sendPush(key)));
+	} catch (error) {
+		console.error("Error sending push notifications:", error);
 	}
 }

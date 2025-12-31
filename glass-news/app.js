@@ -8,9 +8,83 @@
 // =========================================
 
 const API_URL = "https://news-data.omc345.workers.dev";
+const APP_VERSION = "2.0.0-greentext"; // Update this to force reload loops if needed
 const VAPID_PUBLIC_KEY =
 	"BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLwLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM";
+("BIxjCPXkLoit-hiaK21vupJXRhxqaksULZ6l-hheRdLLcLPcveNMYKizT64rKbqzZdRxSKcI3QXvSAR8dXmcpTM");
 let NEWS_DATA = [];
+
+// =========================================
+// Native Feel Optimizations (iOS)
+// =========================================
+
+// 1. Disabling Pinch-to-Zoom (Robust)
+document.addEventListener(
+	"touchmove",
+	function (event) {
+		if (event.scale !== 1) {
+			event.preventDefault();
+		}
+	},
+	{ passive: false },
+);
+
+// 2. Disabling Double-Tap-to-Zoom (Robust)
+// Tracks the time between touches to detect double-taps
+let lastTouchEnd = 0;
+document.addEventListener(
+	"touchend",
+	function (event) {
+		const now = new Date().getTime();
+		if (now - lastTouchEnd <= 300) {
+			event.preventDefault();
+		}
+		lastTouchEnd = now;
+	},
+	{ passive: false },
+);
+
+// 3. Fallback: Disabling Gestures (Pinch)
+// This catches some edge cases where touchmove doesn't fire immediately
+document.addEventListener(
+	"gesturestart",
+	function (event) {
+		event.preventDefault();
+	},
+	{ passive: false },
+);
+
+document.addEventListener(
+	"gesturechange",
+	function (event) {
+		event.preventDefault();
+	},
+	{ passive: false },
+);
+
+document.addEventListener(
+	"gestureend",
+	function (event) {
+		event.preventDefault();
+	},
+	{ passive: false },
+);
+
+// 4. Prevent touchmove scrolling if scale is not 1 (Nuclear option)
+// If the user somehow manages to zoom in, this prevents them from panning around
+window.visualViewport?.addEventListener("resize", () => {
+	if (window.visualViewport.scale > 1) {
+		document.documentElement.style.transform = "scale(1)";
+	}
+	// Scroll reset for keyboard/accessibility shifts
+	if (window.visualViewport.offsetTop > 0) {
+		document.body.style.position = "fixed";
+		document.body.style.top = "0";
+		setTimeout(() => {
+			document.body.style.position = "";
+		}, 100);
+	}
+});
 
 /**
  * Fetch articles from API
@@ -615,7 +689,7 @@ function showArticleModal(article, pushToHistory = true) {
 	// Update content with proper paragraph formatting
 	const paragraphs = article.fullContent.split("\n\n").filter((p) => p.trim());
 	elements.modalContent.innerHTML = paragraphs
-		.map((p) => `<p>${p.trim()}</p>`)
+		.map((p) => `<p style="white-space: pre-wrap; margin-bottom: 1.5em;">${p.trim()}</p>`)
 		.join("");
 
 	// Show modal
@@ -646,6 +720,11 @@ function showArticleModal(article, pushToHistory = true) {
 	document.body.style.position = "fixed";
 	document.body.style.top = `-${bodyScrollY}px`;
 	document.body.style.width = "100%";
+
+	// Store article ID on share button for link generation
+	if (elements.modalShare) {
+		elements.modalShare.dataset.articleId = article.id;
+	}
 }
 
 /**
@@ -716,8 +795,13 @@ function initModal() {
 	// Share button
 	elements.modalShare?.addEventListener("click", () => {
 		const title = elements.modalTitle.textContent;
-		const text = elements.modalContent.textContent.substring(0, 100) + "...";
-		const url = elements.modalSourceLink.href;
+		const text = ""; // User requested to share only the link
+
+		// Use app link if available, fallback to source
+		const articleId = elements.modalShare.dataset.articleId;
+		const url = articleId
+			? `${window.location.origin}/?article=${articleId}`
+			: elements.modalSourceLink.href;
 
 		handleShare(title, text, url);
 	});
@@ -810,10 +894,10 @@ async function requestNotificationPermission() {
 		const permission = await Notification.requestPermission();
 		if (permission === "granted") {
 			showToast("Notifications enabled!", "success");
-			
+
 			// Subscribe to Push
 			await subscribeToPush();
-			
+
 			if (elements.notificationBanner) {
 				elements.notificationBanner.style.display = "none";
 				// Store dismissed state forever if enabled
@@ -837,11 +921,11 @@ async function subscribeToPush() {
 
 	try {
 		const registration = await navigator.serviceWorker.ready;
-		
+
 		// Subscribe
 		const subscription = await registration.pushManager.subscribe({
 			userVisibleOnly: true,
-			applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+			applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
 		});
 
 		console.log("Push Subscription:", subscription);
@@ -883,32 +967,6 @@ function urlBase64ToUint8Array(base64String) {
 		outputArray[i] = rawData.charCodeAt(i);
 	}
 	return outputArray;
-}
-		const permission = await Notification.requestPermission();
-
-		if (permission === "granted") {
-			showToast("Notifications enabled!", "success");
-			hideNotificationBanner();
-
-			// Show a welcome notification
-			setTimeout(() => {
-				showLocalNotification("Welcome to Glass News!", {
-					body: "You'll now receive breaking Glass news updates.",
-					icon: "icons/icon-192.svg",
-					badge: "icons/badge-72.svg",
-				});
-			}, 1000);
-
-			return true;
-		} else {
-			showToast("Notification permission denied", "error");
-			return false;
-		}
-	} catch (error) {
-		console.error("Error requesting notification permission:", error);
-		showToast("Could not request permission", "error");
-		return false;
-	}
 }
 
 /**
@@ -986,10 +1044,12 @@ function initNotifications() {
 	});
 
 	// Navbar notification button
-	elements.notificationBtn?.addEventListener("click", () => {
+	elements.notificationBtn?.addEventListener("click", async () => {
 		if (Notification.permission === "granted") {
+			showToast("Syncing push subscription...", "info");
+			await subscribeToPush();
 			showLocalNotification("Test Notification", {
-				body: "Notifications are working correctly!",
+				body: "Remote notifications synced!",
 			});
 		} else {
 			requestNotificationPermission();
@@ -1095,15 +1155,104 @@ async function registerServiceWorker() {
 
 			console.log("Service Worker registered:", registration.scope);
 
-			// Handle updates
+			// Handle updates - Logic to show "Update Available"
 			registration.addEventListener("updatefound", () => {
 				const newWorker = registration.installing;
+				console.log("[SW] Update found:", newWorker);
+				
 				newWorker.addEventListener("statechange", () => {
+					console.log("[SW] State changed:", newWorker.state);
 					if (
 						newWorker.state === "installed" &&
 						navigator.serviceWorker.controller
 					) {
-						showToast("New version available! Refresh to update.");
+						// New worker installed and waiting to take over
+						console.log("[SW] persistent update ready");
+						showUpdateToast();
+					}
+				});
+			});
+		} catch (error) {
+			console.error("Service Worker registration failed:", error);
+		}
+		
+		// Reload when the new worker takes control
+		let refreshing = false;
+		navigator.serviceWorker.addEventListener("controllerchange", () => {
+			if (!refreshing) {
+				refreshing = true;
+				window.location.reload();
+			}
+		});
+	}
+}
+
+// Add Update Toast UI Helper
+function showUpdateToast() {
+	if (document.querySelector('.update-toast')) return; // Prevent duplicates
+
+	const toast = document.createElement("div");
+	toast.className = "update-toast glass-panel";
+	toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <div>
+                <div style="font-weight: 600;">Update Available</div>
+                <div style="font-size: 0.8rem; opacity: 0.8;">Tap to apply changes</div>
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="window.location.reload()">Update</button>
+    `;
+
+	Object.assign(toast.style, {
+		position: "fixed",
+		bottom: "24px",
+		left: "50%",
+		transform: "translateX(-50%) translateY(100px)",
+		zIndex: "10000",
+		padding: "12px 20px",
+		borderRadius: "16px",
+		display: "flex",
+		alignItems: "center",
+		gap: "16px",
+		background: "rgba(20, 20, 30, 0.95)",
+		backdropFilter: "blur(20px)",
+		-webkitBackdropFilter: "blur(20px)",
+		border: "1px solid rgba(255, 255, 255, 0.15)",
+		color: "white",
+		boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
+		transition: "transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+	});
+
+	document.body.appendChild(toast);
+
+	// Animate in
+	requestAnimationFrame(() => {
+		toast.style.transform = "translateX(-50%) translateY(0)";
+	});
+}
+						console.log(
+							"ServiceWorker registration successful with scope: ",
+							registration.scope,
+						);
+
+						// Reload page when new service worker takes over to ensure fresh code
+						let refreshing = false;
+						navigator.serviceWorker.addEventListener("controllerchange", () => {
+							if (!refreshing) {
+								refreshing = true;
+								window.location.reload();
+							}
+						});
+
+						// If stuck in "installed" state (waiting), send skipWaiting
+						if (registration.waiting) {
+							registration.waiting.postMessage({ type: "SKIP_WAITING" });
+						}
 					}
 				});
 			});

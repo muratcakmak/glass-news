@@ -1,4 +1,4 @@
-import { NewsArticle, Env } from "../types";
+import type { NewsArticle, Env } from "../types";
 
 const ORHAN_PAMUK_PROMPT = `You are a literary journalist combining the introspective, layered storytelling of Orhan Pamuk with the sharp, elegant prose of The New Yorker.
 
@@ -21,6 +21,59 @@ Respond with a JSON object containing:
 {
   "transformedTitle": "A literary, compelling English title (maximum 80 characters, DO NOT include the character count in the output)",
   "transformedContent": "The transformed article in English (300-500 words)",
+  "tags": ["3-5 relevant English tags"]
+}`;
+
+const DIRECT_STYLE_PROMPT = `You are a bold, no-nonsense writer combining the direct, brutally honest style of Mark Manson with the gritty, punchy, minimalist prose of Chuck Palahniuk.
+
+Transform this news article into a compelling, hard-hitting narrative that:
+- Uses short, punchy sentences. No fluff.
+- Cuts through the noise to the raw truth.
+- Uses a direct, conversational tone that grabs the reader by the collar.
+- Focuses on the visceral reality of the story.
+- Avoids flowery adjectives and passive voice.
+- Makes every word fight for its right to be there.
+- Keeps the facts but delivers them with impact.
+- Maintains the essence and accuracy of the original story.
+
+CRITICAL: Output MUST be in English only. If the source article is in Turkish or any other language, translate it to English while transforming it.
+
+Original Title: {title}
+Original Content: {content}
+Source: {source}
+
+Respond with a JSON object containing:
+{
+  "transformedTitle": "A punchy, direct English title (max 80 chars, NO count in output)",
+  "transformedContent": "The transformed article in English (300-500 words)",
+  "tags": ["3-5 relevant English tags"]
+}`;
+
+const GREENTEXT_PROMPT = `You are an anonymous user on an image board. Write a greentext story about the events in this news article.
+
+Formatting rules:
+- Every line MUST start with >
+- First line MUST be > be [someone/something related to story]
+- Second line MUST be > do [something related]
+- All following lines keep the same style: short, punchy, first-person beats
+- Present tense, super concise, minimum grammar
+- Dry humor, a bit self-deprecating, not try-hard edgy
+- No corporate, no "influencer" or motivational tone
+- Optional closer like > mfw ... or > tfw ...
+
+Constraints:
+- Keep it readable even if the reader doesn't know 4chan culture deeply
+- Avoid slurs or anything that would instantly get removed on a normal platform
+- STRICTLY follow the > format. Output raw text in the transformedContent field.
+
+Original Title: {title}
+Original Content: {content}
+Source: {source}
+
+Respond with a JSON object containing:
+{
+  "transformedTitle": "A short, sarcastic English title (max 80 chars, NO count in output)",
+  "transformedContent": "The greentext story (raw string with > line breaks preserved)",
   "tags": ["3-5 relevant English tags"]
 }`;
 
@@ -60,7 +113,38 @@ export async function transformContent(
 			};
 		}
 
-		const prompt = ORHAN_PAMUK_PROMPT.replace("{title}", article.originalTitle)
+		let selectedPrompt = DIRECT_STYLE_PROMPT;
+		let styleName = "direct";
+
+		const style = env.PROMPT_STYLE || "random"; // Default to random if not set
+
+		if (style === "pamuk") {
+			selectedPrompt = ORHAN_PAMUK_PROMPT;
+			styleName = "pamuk";
+		} else if (style === "direct") {
+			selectedPrompt = DIRECT_STYLE_PROMPT;
+			styleName = "direct";
+		} else if (style === "greentext") {
+			selectedPrompt = GREENTEXT_PROMPT;
+			styleName = "greentext";
+		} else if (style === "random") {
+			// Randomly select one
+			const styles = [
+				{ name: "pamuk", prompt: ORHAN_PAMUK_PROMPT },
+				{ name: "direct", prompt: DIRECT_STYLE_PROMPT },
+				{ name: "greentext", prompt: GREENTEXT_PROMPT },
+			];
+			const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+			// @ts-ignore - Random select will always return a valid style
+			selectedPrompt = randomStyle.prompt;
+			// @ts-ignore
+			styleName = randomStyle.name;
+		}
+
+		console.log(`[Transform] Using prompt style: ${styleName}`);
+
+		const prompt = selectedPrompt
+			.replace("{title}", article.originalTitle)
 			.replace("{content}", article.originalContent.slice(0, 2000)) // Limit input length
 			.replace("{source}", article.source);
 

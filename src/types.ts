@@ -24,6 +24,7 @@ export interface Env {
 	SCRAPEDO_API_KEY?: string;
 	SERPER_API_KEY?: string;
 	GEMINI_API_KEY?: string;
+	PROMPT_STYLE?: "pamuk" | "direct" | "greentext" | "random";
 	VAPID_SUBJECT: string;
 	VAPID_PRIVATE_KEY: string;
 	ASSETS: Fetcher;

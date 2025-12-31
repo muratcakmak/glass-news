@@ -90,6 +90,13 @@ html {
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 	text-rendering: optimizeLegibility;
+	overscroll-behavior-y: none; /* Prevent pull-to-refresh rubber banding */
+}
+
+/* Global Native Feel */
+* {
+	-webkit-tap-highlight-color: transparent;
+	touch-action: manipulation; /* Remove 300ms tap delay */
 }
 
 body {
@@ -98,8 +105,14 @@ body {
 	line-height: 1.5;
 	color: var(--text-primary);
 	background: var(--bg-primary);
-	min-height: 100dvh;
+	min-height: 100dvh; /* Dynamic Viewport Height */
 	overflow-x: hidden;
+	padding-top: env(safe-area-inset-top); /* Ensure body starts below notch */
+
+	/* Prohibit selection & context menus */
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-touch-callout: none;
 }
 
 /* Ambient Background */
@@ -194,6 +207,19 @@ a {
 	padding-bottom: calc(var(--space-3xl) + var(--safe-bottom));
 }
 
+/* Allow text selection where appropriate */
+.article-modal-text,
+.news-card-excerpt,
+.featured-card-excerpt,
+p {
+	-webkit-user-select: text;
+	user-select: text;
+}
+
+.article-modal-text {
+	-webkit-touch-callout: default; /* Allow callout (copy/share) on main text */
+}
+
 .page-header {
 	margin-bottom: var(--space-xl);
 }
@@ -226,8 +252,18 @@ a {
 	left: 0;
 	right: 0;
 	z-index: 100;
-	padding: calc(var(--space-md) + var(--safe-top)) var(--space-md)
-		var(--space-md);
+	/* Add safe area padding to top */
+	padding-top: calc(var(--space-md) + env(safe-area-inset-top));
+	padding-bottom: var(--space-md);
+	padding-left: var(--space-md);
+	padding-right: var(--space-md);
+
+	/* Optional: ensures background covers the status bar area */
+	background: linear-gradient(
+		to bottom,
+		rgba(10, 10, 15, 0.8) 0%,
+		transparent 100%
+	);
 }
 
 /* Scrim to hide content scrolling behind status bar */
@@ -1225,6 +1261,9 @@ a {
 	height: 40vh;
 	min-height: 300px;
 	overflow: hidden;
+	border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+	/* Fix for Safari border-radius clipping with overflow:auto parent */
+	-webkit-mask-image: -webkit-radial-gradient(white, black);
 }
 
 .article-modal-image {
@@ -1350,6 +1389,7 @@ a {
 
 .article-modal-text p {
 	margin-bottom: 1.5em;
+	white-space: pre-wrap;
 }
 
 .article-modal-text p:first-of-type::first-letter {
@@ -1393,7 +1433,7 @@ a {
 		width: 100%;
 		height: 100%;
 		max-height: 100%;
-		border-radius: 0;
+		border-radius: 44px 44px 0 0;
 		transform: translateY(100%);
 	}
 
@@ -1403,6 +1443,7 @@ a {
 
 	.article-modal-image-container {
 		height: 35vh;
+		border-radius: 44px 44px 0 0;
 	}
 
 	.article-modal-container {
@@ -1412,8 +1453,12 @@ a {
 	}
 
 	.article-modal-close {
-		top: max(var(--safe-top), 20px);
+		position: fixed; /* Keep it visible while scrolling */
+		top: max(env(safe-area-inset-top), 20px);
 		right: 20px;
+		background: rgba(0, 0, 0, 0.6); /* More visible */
+		border-color: rgba(255, 255, 255, 0.3);
+		z-index: 100;
 	}
 
 	.article-modal-title {
